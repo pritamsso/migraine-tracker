@@ -454,7 +454,7 @@ function scheduleReminder() {
     next.setHours(hour, minute, 0, 0);
     if (next <= now) next.setDate(next.getDate() + 1);
     const delay = next.getTime() - now.getTime();
-    // setTimeout uses a signed 32-bit integer delay; clamp to max supported value.
+    // setTimeout max delay is 2^31-1 ms (2147483647), the max signed 32-bit integer.
     window.setTimeout(() => {
       new Notification("Migraine Tracker reminder", { body: "Log today’s migraine data if applicable." });
     }, Math.min(delay, 2147483647));
