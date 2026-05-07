@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#2f6feb" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <title>Migraine Tracker</title>
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" href="./icon-192.svg" />
+    <link rel="apple-touch-icon" href="./icon-192.svg" />
+    <link rel="stylesheet" href="./styles.css" />
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+  </head>
+  <body>
+    <header>
+      <h1>Migraine Tracker</h1>
+      <p>Track patterns, generate clinician-ready reports, keep your data private.</p>
+    </header>
+
+    <main>
+      <section id="installCard" class="card hidden">
+        <h2>Install app</h2>
+        <p>Install Migraine Tracker for app-like use on mobile/desktop with offline support.</p>
+        <div class="actions">
+          <button id="installPwaBtn">Install Migraine Tracker</button>
+          <small id="installHint"></small>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Preferences</h2>
+        <div class="grid three">
+          <label>
+            Language
+            <select id="language">
+              <option value="en">English</option>
+              <option value="es">Español</option>
+              <option value="fr">Français</option>
+            </select>
+          </label>
+          <label>
+            Timezone
+            <input id="timezone" type="text" readonly />
+          </label>
+          <label>
+            Daily reminder (local time)
+            <input id="reminderTime" type="time" value="20:00" />
+          </label>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Quick Log (under 60 seconds)</h2>
+        <form id="entryForm">
+          <div class="grid three">
+            <label>Start date/time <input name="startTime" type="datetime-local" required /></label>
+            <label>Duration (minutes) <input name="durationMinutes" type="number" min="1" required value="60" /></label>
+            <label>Pain level (0-10) <input name="painLevel" type="number" min="0" max="10" required value="5" /></label>
+          </div>
+          <div class="quick-row">
+            <span>Quick picks:</span>
+            <button type="button" class="quick-option" data-target="durationMinutes" data-value="30">30m</button>
+            <button type="button" class="quick-option" data-target="durationMinutes" data-value="60">60m</button>
+            <button type="button" class="quick-option" data-target="durationMinutes" data-value="120">120m</button>
+            <button type="button" class="quick-option" data-target="painLevel" data-value="3">Pain 3</button>
+            <button type="button" class="quick-option" data-target="painLevel" data-value="5">Pain 5</button>
+            <button type="button" class="quick-option" data-target="painLevel" data-value="8">Pain 8</button>
+          </div>
+
+          <div class="grid three">
+            <label>Food intake notes <input name="foodNotes" type="text" list="foodSuggestions" placeholder="e.g. cheese, red wine" /></label>
+            <label>Hydration (liters) <input name="hydrationLiters" type="number" min="0" step="0.1" value="1.5" /></label>
+            <label>Sleep (hours) <input name="sleepHours" type="number" min="0" max="24" step="0.5" value="7" /></label>
+          </div>
+          <div class="quick-row">
+            <span>Sleep/hydration shortcuts:</span>
+            <button type="button" class="quick-option" data-target="sleepHours" data-value="5">Sleep 5h</button>
+            <button type="button" class="quick-option" data-target="sleepHours" data-value="7">Sleep 7h</button>
+            <button type="button" class="quick-option" data-target="sleepHours" data-value="8">Sleep 8h</button>
+            <button type="button" class="quick-option" data-target="hydrationLiters" data-value="1">Hydration 1L</button>
+            <button type="button" class="quick-option" data-target="hydrationLiters" data-value="1.5">Hydration 1.5L</button>
+            <button type="button" class="quick-option" data-target="hydrationLiters" data-value="2">Hydration 2L</button>
+          </div>
+
+          <div class="grid three">
+            <label>Rescue med <input name="rescueMed" type="text" list="medSuggestions" placeholder="name + dose" /></label>
+            <label>Med effective?
+              <select name="medEffective">
+                <option value="unknown">Unknown</option>
+                <option value="yes">Yes</option>
+                <option value="partial">Partially</option>
+                <option value="no">No</option>
+              </select>
+            </label>
+            <label>Suspected trigger <input name="suspectedTrigger" type="text" list="triggerSuggestions" placeholder="stress, sleep loss, weather" /></label>
+          </div>
+          <div class="quick-row">
+            <span>Common trigger presets:</span>
+            <button type="button" class="quick-option" data-target="suspectedTrigger" data-value="stress">Stress</button>
+            <button type="button" class="quick-option" data-target="suspectedTrigger" data-value="<6h sleep">&lt;6h sleep</button>
+            <button type="button" class="quick-option" data-target="suspectedTrigger" data-value="dehydration">Dehydration</button>
+            <button type="button" class="quick-option" data-target="suspectedTrigger" data-value="weather change">Weather change</button>
+            <button type="button" class="quick-option" data-target="suspectedTrigger" data-value="hormonal">Hormonal</button>
+          </div>
+
+          <label>Daily activity affected <input name="activityImpact" type="text" list="activitySuggestions" placeholder="missed work, reduced focus, bed rest" /></label>
+
+          <details>
+            <summary>Detailed clinical fields (optional)</summary>
+            <div class="grid three">
+              <label>Nausea <input type="checkbox" name="symptomNausea" /></label>
+              <label>Photophobia <input type="checkbox" name="symptomPhoto" /></label>
+              <label>Phonophobia <input type="checkbox" name="symptomPhono" /></label>
+              <label>Aura <input type="checkbox" name="symptomAura" /></label>
+              <label>Unilateral pain <input type="checkbox" name="ichdUnilateral" /></label>
+              <label>Pulsating quality <input type="checkbox" name="ichdPulsating" /></label>
+              <label>Worse with routine activity <input type="checkbox" name="ichdAggravatedByActivity" /></label>
+              <label>Moderate/severe intensity <input type="checkbox" name="ichdModerateSevere" checked /></label>
+            </div>
+            <label>Additional notes <textarea name="notes" rows="3"></textarea></label>
+          </details>
+
+          <div class="actions">
+            <label class="checkbox-inline">
+              <input id="consentCheckbox" type="checkbox" required />
+              I consent to processing this health data locally and (optionally) in my own Google Drive.
+            </label>
+            <button type="submit">Save entry</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="card">
+        <h2>Reports & insights</h2>
+        <div class="actions">
+          <button data-range="30" class="reportBtn">Generate 30-day report</button>
+          <button data-range="60" class="reportBtn">Generate 60-day report</button>
+          <button data-range="90" class="reportBtn">Generate 90-day report</button>
+          <button id="printReportBtn">Print/PDF report</button>
+          <button id="csvExportBtn">Export CSV</button>
+        </div>
+        <article id="reportOutput" class="report"></article>
+      </section>
+
+      <section class="card">
+        <h2>Clinical assessments</h2>
+        <div class="grid two">
+          <div>
+            <h3>HIT-6</h3>
+            <p>Six answers scored 6/8/10/11/13 (Never → Always).</p>
+            <input id="hit6Input" type="text" placeholder="e.g. 11,10,8,13,10,11" />
+            <button id="hit6CalcBtn">Calculate HIT-6</button>
+            <p id="hit6Result"></p>
+          </div>
+          <div>
+            <h3>MIDAS</h3>
+            <p>Days affected in last 3 months (5-item total).</p>
+            <input id="midasInput" type="text" placeholder="e.g. 2,3,5,4,6" />
+            <button id="midasCalcBtn">Calculate MIDAS</button>
+            <p id="midasResult"></p>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Calendar & timeline</h2>
+        <p id="streakOutput"></p>
+        <div id="calendarOutput" class="calendar"></div>
+        <ul id="timelineOutput" class="timeline"></ul>
+      </section>
+
+      <section class="card">
+        <h2>Privacy & backup</h2>
+        <p>
+          Data is stored privately on this device (local storage) by default.
+          If you enable backup, encrypted data is uploaded to your own Google Drive app data area.
+          For HIPAA-covered workflows in the U.S., do not rely on consumer accounts without proper compliant setup.
+        </p>
+        <div class="actions">
+          <input id="googleClientId" type="text" placeholder="Google OAuth Client ID (optional)" />
+          <input id="passphrase" type="password" placeholder="Encryption passphrase" />
+          <button id="driveConnectBtn">Connect Google Drive</button>
+          <button id="backupBtn">Encrypted backup to Drive</button>
+          <button id="restoreBtn">Restore latest backup</button>
+          <button id="deleteDataBtn" class="danger">Delete all local data</button>
+        </div>
+        <small id="driveStatus">Drive status: not connected</small>
+      </section>
+    </main>
+
+    <datalist id="foodSuggestions">
+      <option value="Aged cheese"></option>
+      <option value="Chocolate"></option>
+      <option value="Processed meat"></option>
+      <option value="Red wine"></option>
+      <option value="Skipped meal"></option>
+      <option value="Caffeine change"></option>
+    </datalist>
+    <datalist id="medSuggestions">
+      <option value="Ibuprofen 400mg"></option>
+      <option value="Naproxen 500mg"></option>
+      <option value="Sumatriptan 50mg"></option>
+      <option value="Rizatriptan 10mg"></option>
+      <option value="Acetaminophen 500mg"></option>
+    </datalist>
+    <datalist id="triggerSuggestions">
+      <option value="stress"></option>
+      <option value="<6h sleep"></option>
+      <option value="sleep loss"></option>
+      <option value="dehydration"></option>
+      <option value="weather change"></option>
+      <option value="menstrual/hormonal"></option>
+      <option value="bright light"></option>
+      <option value="loud noise"></option>
+    </datalist>
+    <datalist id="activitySuggestions">
+      <option value="Missed work"></option>
+      <option value="Worked with reduced productivity"></option>
+      <option value="Could not exercise"></option>
+      <option value="Stayed in bed"></option>
+      <option value="Missed social activity"></option>
+    </datalist>
+
+    <template id="timelineItemTemplate">
+      <li class="timeline-item">
+        <div class="timeline-header">
+          <strong class="date"></strong>
+          <span class="pain"></span>
+        </div>
+        <div class="timeline-meta"></div>
+        <div class="timeline-notes"></div>
+        <div class="actions">
+          <button class="editBtn">Edit</button>
+          <button class="deleteBtn danger">Delete</button>
+        </div>
+      </li>
+    </template>
+
+    <script src="./app.js" type="module"></script>
+  </body>
+</html>
