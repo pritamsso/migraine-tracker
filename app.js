@@ -318,7 +318,8 @@ async function connectGoogleDrive() {
     driveStatus.textContent = "Drive status: Google Identity unavailable.";
     return;
   }
-  const clientId = window.MIGRAINE_TRACKER_GOOGLE_CLIENT_ID || prompt("Enter Google OAuth Client ID");
+  const clientIdInput = document.getElementById("googleClientId");
+  const clientId = clientIdInput?.value?.trim() || window.MIGRAINE_TRACKER_GOOGLE_CLIENT_ID;
   if (!clientId) return;
   const tokenClient = google.accounts.oauth2.initTokenClient({
     client_id: clientId,
@@ -453,6 +454,7 @@ function scheduleReminder() {
     next.setHours(hour, minute, 0, 0);
     if (next <= now) next.setDate(next.getDate() + 1);
     const delay = next.getTime() - now.getTime();
+    // setTimeout uses a signed 32-bit integer delay; clamp to max supported value.
     window.setTimeout(() => {
       new Notification("Migraine Tracker reminder", { body: "Log today’s migraine data if applicable." });
     }, Math.min(delay, 2147483647));

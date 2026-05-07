@@ -34,7 +34,7 @@ A privacy-first migraine tracker focused on useful clinical data, fast daily log
 
 No build tooling is required.
 
-1. Open `/home/runner/work/migraine-tracker/migraine-tracker/index.html` in a modern browser.
+1. Open `index.html` in a modern browser.
 2. Start logging entries.
 
 ## Google Drive setup (optional)
@@ -42,7 +42,7 @@ No build tooling is required.
 To enable Drive backup/restore:
 
 1. Create a Google OAuth client ID for a web app.
-2. When clicking **Connect Google Drive**, provide the client ID when prompted.
+2. Enter your client ID in the **Google OAuth Client ID** field, then click **Connect Google Drive**.
 3. Enter an encryption passphrase before backup/restore actions.
 
 Notes:
