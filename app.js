@@ -25,6 +25,7 @@ const installCard = document.getElementById("installCard");
 const installPwaBtn = document.getElementById("installPwaBtn");
 const installHint = document.getElementById("installHint");
 let deferredInstallPrompt = null;
+let reminderTimeoutId = null;
 
 timezoneInput.value = state.preferences.timezone;
 languageInput.value = state.preferences.language;
@@ -507,6 +508,10 @@ async function installPwa() {
 
 function scheduleReminder() {
   if (!("Notification" in window)) return;
+  if (reminderTimeoutId) {
+    clearTimeout(reminderTimeoutId);
+    reminderTimeoutId = null;
+  }
   Notification.requestPermission().then((result) => {
     if (result !== "granted") return;
     const [hour, minute] = state.preferences.reminderTime.split(":").map(Number);
@@ -516,8 +521,9 @@ function scheduleReminder() {
     if (next <= now) next.setDate(next.getDate() + 1);
     const delay = next.getTime() - now.getTime();
     // setTimeout max delay is 2^31-1 ms (2147483647), the max signed 32-bit integer.
-    window.setTimeout(() => {
+    reminderTimeoutId = window.setTimeout(() => {
       new Notification("Migraine Tracker reminder", { body: "Log today’s migraine data if applicable." });
+      scheduleReminder();
     }, Math.min(delay, 2147483647));
   });
 }
