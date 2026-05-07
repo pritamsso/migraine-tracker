@@ -112,3 +112,24 @@ button {
 .danger {
   border-color: #d44a4a;
 }
+
+.hidden {
+  display: none;
+}
+
+.quick-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.quick-row span {
+  font-size: 0.9rem;
+  opacity: 0.85;
+}
+
+.quick-option {
+  padding: 0.35rem 0.55rem;
+}

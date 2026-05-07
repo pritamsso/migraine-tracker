@@ -21,6 +21,10 @@ const driveStatus = document.getElementById("driveStatus");
 const timezoneInput = document.getElementById("timezone");
 const languageInput = document.getElementById("language");
 const reminderInput = document.getElementById("reminderTime");
+const installCard = document.getElementById("installCard");
+const installPwaBtn = document.getElementById("installPwaBtn");
+const installHint = document.getElementById("installHint");
+let deferredInstallPrompt = null;
 
 timezoneInput.value = state.preferences.timezone;
 languageInput.value = state.preferences.language;
@@ -31,6 +35,7 @@ reminderInput.addEventListener("change", () => {
   updatePreferences();
   scheduleReminder();
 });
+entryForm.addEventListener("click", (event) => handleQuickOption(event));
 
 entryForm.addEventListener("submit", (event) => {
   event.preventDefault();
@@ -43,10 +48,7 @@ entryForm.addEventListener("submit", (event) => {
   }
   persistEntries();
   entryForm.reset();
-  entryForm.elements.durationMinutes.value = 60;
-  entryForm.elements.painLevel.value = 5;
-  entryForm.elements.hydrationLiters.value = 1.5;
-  entryForm.elements.sleepHours.value = 7;
+  applyQuickDefaults();
   renderAll();
 });
 
@@ -67,6 +69,7 @@ document.getElementById("midasCalcBtn").addEventListener("click", calcMidas);
 document.getElementById("driveConnectBtn").addEventListener("click", connectGoogleDrive);
 document.getElementById("backupBtn").addEventListener("click", backupToDrive);
 document.getElementById("restoreBtn").addEventListener("click", restoreFromDrive);
+installPwaBtn.addEventListener("click", installPwa);
 
 function formToEntry(formData) {
   const editingId = entryForm.dataset.editId;
@@ -243,6 +246,15 @@ function beginEdit(id) {
   entryForm.elements.ichdAggravatedByActivity.checked = Boolean(entry.ichd?.aggravatedByActivity);
   entryForm.elements.ichdModerateSevere.checked = Boolean(entry.ichd?.moderateSevere);
   window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function handleQuickOption(event) {
+  const button = event.target.closest(".quick-option");
+  if (!button) return;
+  const field = button.dataset.target;
+  const value = button.dataset.value;
+  if (!field || value === undefined || !entryForm.elements[field]) return;
+  entryForm.elements[field].value = value;
 }
 
 function removeEntry(id) {
@@ -444,6 +456,55 @@ function updatePreferences(skipPersist = false) {
   if (!skipPersist) localStorage.setItem(PREF_KEY, JSON.stringify(state.preferences));
 }
 
+function applyQuickDefaults() {
+  entryForm.dataset.editId = "";
+  entryForm.elements.durationMinutes.value = 60;
+  entryForm.elements.painLevel.value = 5;
+  entryForm.elements.hydrationLiters.value = 1.5;
+  entryForm.elements.sleepHours.value = 7;
+  const now = new Date();
+  now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+  entryForm.elements.startTime.value = now.toISOString().slice(0, 16);
+}
+
+async function registerPwa() {
+  if (!("serviceWorker" in navigator)) return;
+  try {
+    await navigator.serviceWorker.register("./service-worker.js");
+  } catch {
+    installHint.textContent = "Offline install support could not be initialized.";
+  }
+}
+
+function setupInstallPrompt() {
+  if (window.matchMedia("(display-mode: standalone)").matches || navigator.standalone) {
+    installCard.classList.add("hidden");
+    return;
+  }
+  installHint.textContent = "Use install to open quickly from your home screen.";
+  window.addEventListener("beforeinstallprompt", (event) => {
+    event.preventDefault();
+    deferredInstallPrompt = event;
+    installCard.classList.remove("hidden");
+    installHint.textContent = "Install for one-tap access on mobile and desktop.";
+  });
+  window.addEventListener("appinstalled", () => {
+    installCard.classList.add("hidden");
+    installHint.textContent = "Installed.";
+  });
+}
+
+async function installPwa() {
+  if (!deferredInstallPrompt) {
+    installHint.textContent = "If Install is unavailable, use your browser menu to add to home screen.";
+    return;
+  }
+  deferredInstallPrompt.prompt();
+  const result = await deferredInstallPrompt.userChoice;
+  installHint.textContent = `Install status: ${result.outcome}.`;
+  deferredInstallPrompt = null;
+}
+
 function scheduleReminder() {
   if (!("Notification" in window)) return;
   Notification.requestPermission().then((result) => {
@@ -506,3 +567,6 @@ function topCounts(values, limit) {
 
 renderAll();
 scheduleReminder();
+applyQuickDefaults();
+registerPwa();
+setupInstallPrompt();

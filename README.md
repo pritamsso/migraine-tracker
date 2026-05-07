@@ -2,6 +2,8 @@
 
 A privacy-first migraine tracker focused on useful clinical data, fast daily logging, and actionable reporting.
 
+Yes — this is a completely static site (HTML/CSS/JS) and can be deployed on any static hosting platform.
+
 ## What this implementation includes
 
 - Structured migraine diary fields:
@@ -11,10 +13,12 @@ A privacy-first migraine tracker focused on useful clinical data, fast daily log
   - Optional ICHD-3-aligned symptom/attack characteristics (nausea, photophobia, phonophobia, aura, unilateral/pulsating/etc.)
 - UX for fast logging:
   - Quick log flow with optional detailed clinical fields
+  - Autocomplete suggestions and quick-preset tap buttons for common values
   - Low-friction local edit/delete
   - Calendar and timeline views
   - Streak output
   - Browser reminder support
+  - Installable PWA with offline app-shell support
 - Reporting:
   - 30/60/90 day summaries
   - Severity, duration, med response, top triggers/foods
@@ -29,6 +33,7 @@ A privacy-first migraine tracker focused on useful clinical data, fast daily log
   - Optional Google Drive backup/restore with least-privilege scopes (`drive.file` + `drive.appdata`)
   - Client-side AES-GCM encryption before cloud upload
   - Local data deletion controls
+  - Clear in-app messaging that data stays on-device unless user opts into encrypted Drive backup
 
 ## Run locally
 
@@ -36,6 +41,11 @@ No build tooling is required.
 
 1. Open `index.html` in a modern browser.
 2. Start logging entries.
+
+## PWA install
+
+- The app includes a web manifest + service worker and supports install prompts where available.
+- If your browser does not show the in-app install button, use browser menu options like **Add to Home Screen** / **Install App**.
 
 ## Google Drive setup (optional)
 
