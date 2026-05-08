@@ -65,6 +65,24 @@ async function generateCodeChallenge(verifier) {
   return base64UrlEncode(hash)
 }
 
+function calculateAccessTokenExpiry(expiresInSeconds) {
+  return Date.now() + Math.max(
+    (Number(expiresInSeconds) || 3600) - ACCESS_TOKEN_EXPIRY_BUFFER_SECONDS,
+    MIN_ACCESS_TOKEN_LIFETIME_SECONDS
+  ) * 1000
+}
+
+function getValidStoredAccessToken() {
+  const token = sessionStorage.getItem(ACCESS_KEY)
+  const expiresAt = Number(sessionStorage.getItem(EXPIRES_AT_KEY) || 0)
+  if (!token || !expiresAt || Date.now() >= expiresAt) {
+    sessionStorage.removeItem(ACCESS_KEY)
+    sessionStorage.removeItem(EXPIRES_AT_KEY)
+    return null
+  }
+  return token
+}
+
 // ── Public API ────────────────────────────────────────────────────────────────
 
 /**
@@ -150,11 +168,7 @@ export async function handleOAuthCallback() {
 
   if (data.access_token) {
     sessionStorage.setItem(ACCESS_KEY, data.access_token)
-    const expiresAt = Date.now() + Math.max(
-      (Number(data.expires_in) || 3600) - ACCESS_TOKEN_EXPIRY_BUFFER_SECONDS,
-      MIN_ACCESS_TOKEN_LIFETIME_SECONDS
-    ) * 1000
-    sessionStorage.setItem(EXPIRES_AT_KEY, String(expiresAt))
+    sessionStorage.setItem(EXPIRES_AT_KEY, String(calculateAccessTokenExpiry(data.expires_in)))
   }
   localStorage.removeItem(REFRESH_KEY)
 
@@ -168,21 +182,12 @@ export async function handleOAuthCallback() {
  */
 export async function refreshAccessToken() {
   localStorage.removeItem(REFRESH_KEY)
-  const token = sessionStorage.getItem(ACCESS_KEY)
-  const expiresAt = Number(sessionStorage.getItem(EXPIRES_AT_KEY) || 0)
-  if (!token || !expiresAt || Date.now() >= expiresAt) {
-    sessionStorage.removeItem(ACCESS_KEY)
-    sessionStorage.removeItem(EXPIRES_AT_KEY)
-    return null
-  }
-  return token
+  return getValidStoredAccessToken()
 }
 
 /** True if the user has an active access token in this browser session. */
 export function isDriveLinked() {
-  const token = sessionStorage.getItem(ACCESS_KEY)
-  const expiresAt = Number(sessionStorage.getItem(EXPIRES_AT_KEY) || 0)
-  return Boolean(token && expiresAt && Date.now() < expiresAt)
+  return Boolean(getValidStoredAccessToken())
 }
 
 /** Revoke the current access token and unlink Drive. */
