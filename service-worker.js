@@ -17,6 +17,11 @@ self.addEventListener('activate', event => {
 
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return
+  // Skip non-http(s) schemes (e.g. chrome-extension://) — Cache API only supports http(s)
+  if (!event.request.url.startsWith('http')) return
+  // Skip third-party auth / API calls — always fetch live
+  const url = new URL(event.request.url)
+  if (url.hostname !== self.location.hostname) return
   event.respondWith(
     caches.match(event.request).then(cached => {
       if (cached) return cached

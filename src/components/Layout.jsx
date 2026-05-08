@@ -18,9 +18,10 @@ const TABS = [
 
 export default function Layout({
   entries, addEntry, updateEntry, removeEntry, replaceAll,
-  preferences, savePreferences, addToast
+  preferences, savePreferences, addToast,
+  driveToken, setDriveToken, pwaPrompt, onPwaInstalled, defaultTab
 }) {
-  const [activeTab, setActiveTab]   = useState('dashboard')
+  const [activeTab, setActiveTab]   = useState(defaultTab || 'dashboard')
   const [editingEntry, setEditingEntry] = useState(null)
 
   function startEdit(entry) {
@@ -32,7 +33,8 @@ export default function Layout({
   const props = {
     entries, addEntry, updateEntry, removeEntry, replaceAll,
     preferences, savePreferences, addToast,
-    editingEntry, setEditingEntry, setActiveTab
+    editingEntry, setEditingEntry, setActiveTab,
+    driveToken, setDriveToken, pwaPrompt, onPwaInstalled,
   }
 
   return (
