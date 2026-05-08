@@ -2,35 +2,42 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - 'dist/**'
   workflow_dispatch:
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 concurrency:
-  group: "pages"
+  group: "deploy-dist-to-main"
   cancel-in-progress: false
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
       - run: npm ci
+      - run: rm -rf dist
       - run: npm run build
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: dist
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - uses: actions/configure-pages@v4
-      - id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Verify dist artifacts exist
+        run: |
+          if [ ! -d dist ] || [ -z "$(find dist -type f -print -quit)" ]; then
+            echo "Build did not produce dist artifacts."
+            exit 1
+          fi
+      - name: Commit and push dist to main
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A dist
+          if git diff --cached --quiet; then
+            echo "No dist changes to commit."
+            exit 0
+          fi
+          git commit -m "chore: update dist for deployment [skip ci]"
+          git push origin HEAD:main
