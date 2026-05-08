@@ -14,7 +14,9 @@
  *   5. Set VITE_GOOGLE_CLIENT_ID in .env.local or your CI environment.
  */
 
-const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
+const CLIENT_ID =
+  import.meta.env.VITE_GOOGLE_CLIENT_ID ||
+  '572277088448-1u6c9t2v8b8tba7g8ta2uma27ujald4t.apps.googleusercontent.com'
 
 if (!CLIENT_ID) {
   console.warn(
