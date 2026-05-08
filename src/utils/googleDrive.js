@@ -39,8 +39,8 @@ const TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token'
 const ACCESS_KEY     = 'migraineDrive.accessToken'
 const EXPIRES_AT_KEY = 'migraineDrive.accessTokenExpiresAt'
 const REFRESH_KEY    = 'migraineDrive.refreshToken' // legacy key cleanup only
-const TOKEN_EXPIRY_BUFFER_SECONDS = 30
-const MIN_TOKEN_EXPIRY_SECONDS = 60
+const ACCESS_TOKEN_EXPIRY_BUFFER_SECONDS = 30
+const MIN_ACCESS_TOKEN_LIFETIME_SECONDS = 60
 
 // ── PKCE helpers ──────────────────────────────────────────────────────────────
 
@@ -151,8 +151,8 @@ export async function handleOAuthCallback() {
   if (data.access_token) {
     sessionStorage.setItem(ACCESS_KEY, data.access_token)
     const expiresAt = Date.now() + Math.max(
-      (Number(data.expires_in) || 3600) - TOKEN_EXPIRY_BUFFER_SECONDS,
-      MIN_TOKEN_EXPIRY_SECONDS
+      (Number(data.expires_in) || 3600) - ACCESS_TOKEN_EXPIRY_BUFFER_SECONDS,
+      MIN_ACCESS_TOKEN_LIFETIME_SECONDS
     ) * 1000
     sessionStorage.setItem(EXPIRES_AT_KEY, String(expiresAt))
   }
