@@ -39,6 +39,8 @@ const TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token'
 const ACCESS_KEY     = 'migraineDrive.accessToken'
 const EXPIRES_AT_KEY = 'migraineDrive.accessTokenExpiresAt'
 const REFRESH_KEY    = 'migraineDrive.refreshToken' // legacy key cleanup only
+const TOKEN_EXPIRY_BUFFER_SECONDS = 30
+const MIN_TOKEN_EXPIRY_SECONDS = 60
 
 // ── PKCE helpers ──────────────────────────────────────────────────────────────
 
@@ -123,7 +125,9 @@ export async function handleOAuthCallback() {
   const verifier = sessionStorage.getItem('_oauthVerifier')
   sessionStorage.removeItem('_oauthVerifier')
   sessionStorage.removeItem('_oauthState')
-  if (!verifier) throw new Error('Security error: missing PKCE verifier. Please try again.')
+  if (!verifier) {
+    throw new Error('Security error: missing PKCE verifier. Please restart the authorization process.')
+  }
 
   const res = await fetch(TOKEN_ENDPOINT, {
     method:  'POST',
@@ -146,7 +150,10 @@ export async function handleOAuthCallback() {
 
   if (data.access_token) {
     sessionStorage.setItem(ACCESS_KEY, data.access_token)
-    const expiresAt = Date.now() + Math.max((Number(data.expires_in) || 3600) - 30, 60) * 1000
+    const expiresAt = Date.now() + Math.max(
+      (Number(data.expires_in) || 3600) - TOKEN_EXPIRY_BUFFER_SECONDS,
+      MIN_TOKEN_EXPIRY_SECONDS
+    ) * 1000
     sessionStorage.setItem(EXPIRES_AT_KEY, String(expiresAt))
   }
   localStorage.removeItem(REFRESH_KEY)
