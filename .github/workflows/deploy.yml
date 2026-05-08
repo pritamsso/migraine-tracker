@@ -3,12 +3,12 @@ on:
   push:
     branches: [main]
     paths-ignore:
-      - 'dist/**'
+      - 'docs/**'
   workflow_dispatch:
 permissions:
   contents: write
 concurrency:
-  group: "deploy-dist-to-main"
+  group: "deploy-docs-to-main"
   cancel-in-progress: false
 jobs:
   deploy:
@@ -22,22 +22,22 @@ jobs:
           node-version: '20'
           cache: 'npm'
       - run: npm ci
-      - run: rm -rf dist
+      - run: rm -rf docs
       - run: npm run build
-      - name: Verify dist artifacts exist
+      - name: Verify docs artifacts exist
         run: |
-          if [ ! -d dist ] || [ -z "$(find dist -type f -print -quit)" ]; then
-            echo "Build did not produce dist artifacts."
+          if [ ! -d docs ] || [ -z "$(find docs -type f -print -quit)" ]; then
+            echo "Build did not produce docs artifacts."
             exit 1
           fi
-      - name: Commit and push dist to main
+      - name: Commit and push docs to main
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -f -A dist
+          git add -f -A docs
           if git diff --cached --quiet; then
-            echo "No dist changes to commit."
+            echo "No docs changes to commit."
             exit 0
           fi
-          git commit -m "chore: update dist for deployment [skip ci]"
+          git commit -m "chore: update docs for deployment [skip ci]"
           git push origin HEAD:main
