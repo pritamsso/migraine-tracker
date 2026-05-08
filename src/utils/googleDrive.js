@@ -130,13 +130,12 @@ export async function handleOAuthCallback() {
 
   const savedState = sessionStorage.getItem(OAUTH_STATE_HASH_KEY)
   sessionStorage.removeItem(OAUTH_STATE_HASH_KEY)
-  const stateHash = state ? await hashTextBase64Url(state) : ''
-  if (!savedState || !stateHash || stateHash !== savedState) {
+  if (!state || !savedState || await hashTextBase64Url(state) !== savedState) {
     throw new Error('Security error: state mismatch. Please try again.')
   }
 
   sessionStorage.setItem(ACCESS_KEY, accessToken)
-  const parsedExpiresIn = Number.parseInt(String(expiresIn ?? ''), 10)
+  const parsedExpiresIn = Number.parseInt(expiresIn ?? '', 10)
   const expiresAt = calculateAccessTokenExpiry(
     Number.isNaN(parsedExpiresIn) ? DEFAULT_ACCESS_TOKEN_LIFETIME_SECONDS : parsedExpiresIn
   )
