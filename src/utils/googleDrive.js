@@ -41,6 +41,7 @@ const EXPIRES_AT_KEY = 'migraineDrive.accessTokenExpiresAt'
 const REFRESH_KEY    = 'migraineDrive.refreshToken' // legacy key cleanup only
 const ACCESS_TOKEN_EXPIRY_BUFFER_SECONDS = 30
 const MIN_ACCESS_TOKEN_LIFETIME_SECONDS = 60
+const DEFAULT_ACCESS_TOKEN_LIFETIME_SECONDS = 3600
 
 // ── PKCE helpers ──────────────────────────────────────────────────────────────
 
@@ -67,7 +68,7 @@ async function generateCodeChallenge(verifier) {
 
 function calculateAccessTokenExpiry(expiresInSeconds) {
   return Date.now() + Math.max(
-    (Number(expiresInSeconds) || 3600) - ACCESS_TOKEN_EXPIRY_BUFFER_SECONDS,
+    (Number(expiresInSeconds) || DEFAULT_ACCESS_TOKEN_LIFETIME_SECONDS) - ACCESS_TOKEN_EXPIRY_BUFFER_SECONDS,
     MIN_ACCESS_TOKEN_LIFETIME_SECONDS
   ) * 1000
 }
