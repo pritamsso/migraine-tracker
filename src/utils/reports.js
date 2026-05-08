@@ -26,7 +26,9 @@ function buildInsights(entries) {
   const analyses = [
     ratioAnalysis(entries, e => e.sleepHours > 0 && e.sleepHours < 6, 'sleep <6h'),
     ratioAnalysis(entries, e => e.hydrationLiters > 0 && e.hydrationLiters < 1.5, 'hydration <1.5L'),
+    ratioAnalysis(entries, e => Number(e.stressLevel) >= 7, 'stress ≥7/10'),
     ratioAnalysis(entries, e => /stress/i.test(e.suspectedTrigger), 'stress trigger label'),
+    ratioAnalysis(entries, e => e.cyclePhase && e.cyclePhase !== 'Not tracked', 'cycle phase logged'),
     ratioAnalysis(entries, e => Boolean(e.foodNotes), 'food logged')
   ].filter(Boolean)
   if (!analyses.length) return ['- Insufficient feature diversity for robust pattern signals.']
@@ -49,6 +51,9 @@ export function renderReport(entries, days) {
   const topTriggers = topCounts(subset.map(e => e.suspectedTrigger).filter(Boolean), 5)
   const topFoods = topCounts(subset.map(e => e.foodNotes).filter(Boolean), 5)
   const insights = buildInsights(subset)
+  const stressEntries = subset.filter(e => Number.isFinite(e.stressLevel))
+  const avgStress = stressEntries.length ? mean(stressEntries.map(e => Number(e.stressLevel))).toFixed(1) : null
+  const topCyclePhases = topCounts(subset.map(e => e.cyclePhase).filter(v => v && v !== 'Not tracked'), 3)
   return [
     `Migraine Tracker Report (${days} days)`,
     `Generated: ${new Date().toLocaleString()}`,
@@ -57,6 +62,7 @@ export function renderReport(entries, days) {
     `Migraine days/month (normalized): ${(migraineDays * 30 / days).toFixed(1)}`,
     `Average pain severity (0-10): ${avgPain}`,
     `Average duration (minutes): ${avgDuration}`,
+    avgStress ? `Average stress level (0-10): ${avgStress}` : 'Average stress level (0-10): —',
     `Medication effectiveness rate (yes/partial): ${medResponse}%`,
     '',
     'Top suspected triggers:',
@@ -64,6 +70,9 @@ export function renderReport(entries, days) {
     '',
     'Top food associations:',
     ...topFoods.map(i => `- ${i.value}: ${i.count}`),
+    '',
+    'Top cycle phases logged:',
+    ...(topCyclePhases.length ? topCyclePhases.map(i => `- ${i.value}: ${i.count}`) : ['- Not enough cycle-phase data logged.']),
     '',
     'Pattern signals (correlation, not causation):',
     ...insights,
@@ -78,13 +87,13 @@ export function renderReport(entries, days) {
 export function exportCsvBlob(entries) {
   const headers = [
     'id', 'startTime', 'durationMinutes', 'painLevel', 'foodNotes', 'hydrationLiters',
-    'sleepHours', 'rescueMed', 'medEffective', 'suspectedTrigger', 'activityImpact', 'notes',
+    'sleepHours', 'stressLevel', 'cyclePhase', 'rescueMed', 'medEffective', 'suspectedTrigger', 'activityImpact', 'notes',
     'nausea', 'photophobia', 'phonophobia', 'aura',
     'ichdUnilateral', 'ichdPulsating', 'ichdAggravatedByActivity', 'ichdModerateSevere'
   ]
   const rows = entries.map(e => [
     e.id, e.startTime, e.durationMinutes, e.painLevel, e.foodNotes, e.hydrationLiters,
-    e.sleepHours, e.rescueMed, e.medEffective, e.suspectedTrigger, e.activityImpact, e.notes,
+    e.sleepHours, e.stressLevel, e.cyclePhase, e.rescueMed, e.medEffective, e.suspectedTrigger, e.activityImpact, e.notes,
     e.symptoms?.nausea, e.symptoms?.photophobia, e.symptoms?.phonophobia, e.symptoms?.aura,
     e.ichd?.unilateral, e.ichd?.pulsating, e.ichd?.aggravatedByActivity, e.ichd?.moderateSevere
   ])

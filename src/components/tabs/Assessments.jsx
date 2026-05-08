@@ -33,35 +33,35 @@ export default function Assessments() {
     setMidasResult(`MIDAS score: ${score} — ${grade}`)
   }
 
-  const inputCls = 'w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400'
+  const inputCls = 'w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400'
 
   return (
     <div className="space-y-4">
       <Card>
-        <h3 className="font-semibold text-slate-800 mb-1">HIT-6 Headache Impact Test</h3>
-        <p className="text-xs text-slate-500 mb-3">
+        <h3 className="font-semibold text-slate-800 dark:text-slate-100 mb-1">HIT-6 Headache Impact Test</h3>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
           Enter 6 comma-separated scores. Values: 6 (Never), 8 (Rarely), 10 (Sometimes), 11 (Very often), 13 (Always).
         </p>
         <input value={hit6Input} onChange={e => setHit6Input(e.target.value)}
           placeholder="e.g. 11,10,8,13,10,11" className={inputCls + ' mb-3'} />
         <Button onClick={calcHit6}><Calculator className="w-4 h-4" /> Calculate HIT-6</Button>
         {hit6Result && (
-          <p className="mt-3 text-sm font-semibold text-indigo-700 bg-indigo-50 rounded-xl px-4 py-2">
+          <p className="mt-3 text-sm font-semibold text-indigo-700 dark:text-indigo-200 bg-indigo-50 dark:bg-indigo-950/40 rounded-xl px-4 py-2">
             {hit6Result}
           </p>
         )}
       </Card>
 
       <Card>
-        <h3 className="font-semibold text-slate-800 mb-1">MIDAS Disability Assessment</h3>
-        <p className="text-xs text-slate-500 mb-3">
+        <h3 className="font-semibold text-slate-800 dark:text-slate-100 mb-1">MIDAS Disability Assessment</h3>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
           Enter 5 comma-separated values (days affected in last 3 months).
         </p>
         <input value={midasInput} onChange={e => setMidasInput(e.target.value)}
           placeholder="e.g. 2,3,5,4,6" className={inputCls + ' mb-3'} />
         <Button onClick={calcMidas}><Calculator className="w-4 h-4" /> Calculate MIDAS</Button>
         {midasResult && (
-          <p className="mt-3 text-sm font-semibold text-indigo-700 bg-indigo-50 rounded-xl px-4 py-2">
+          <p className="mt-3 text-sm font-semibold text-indigo-700 dark:text-indigo-200 bg-indigo-50 dark:bg-indigo-950/40 rounded-xl px-4 py-2">
             {midasResult}
           </p>
         )}

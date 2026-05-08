@@ -45,6 +45,25 @@ export default function App() {
     return () => window.removeEventListener('beforeinstallprompt', handler)
   }, [])
 
+  useEffect(() => {
+    const media = window.matchMedia('(prefers-color-scheme: dark)')
+
+    const applyTheme = () => {
+      const pref = preferences.theme || 'system'
+      const isDark = pref === 'dark' || (pref === 'system' && media.matches)
+      document.documentElement.classList.toggle('dark', isDark)
+    }
+
+    applyTheme()
+    const onChange = () => applyTheme()
+    if (media.addEventListener) {
+      media.addEventListener('change', onChange)
+      return () => media.removeEventListener('change', onChange)
+    }
+    media.addListener(onChange)
+    return () => media.removeListener(onChange)
+  }, [preferences.theme])
+
   if (!onboarded) {
     return (
       <>

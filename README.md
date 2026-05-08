@@ -7,6 +7,8 @@ Migraine Tracker is a privacy-first web app for logging episodes, spotting patte
 ## Highlights
 
 - Fast episode logging with pain, duration, triggers, medication response, hydration, sleep, and symptom details
+- Theme support with light, dark, or system mode
+- Expanded episode context with stress level and hormonal cycle phase logging
 - Personal dashboard with recent episodes, streaks, and 30-day summary stats
 - Printable 30/60/90 day reports plus CSV export
 - HIT-6 and MIDAS assessments

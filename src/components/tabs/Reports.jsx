@@ -26,7 +26,7 @@ export default function Reports({ entries, addToast }) {
   return (
     <div className="space-y-4">
       <Card>
-        <h3 className="font-semibold text-slate-800 mb-3">Generate report</h3>
+        <h3 className="font-semibold text-slate-800 dark:text-slate-100 mb-3">Generate report</h3>
         <div className="flex flex-wrap gap-2 mb-4">
           {[30, 60, 90].map(d => (
             <Button
@@ -50,13 +50,13 @@ export default function Reports({ entries, addToast }) {
 
       {report && (
         <Card>
-          <pre className="text-xs text-slate-700 whitespace-pre-wrap font-mono leading-relaxed">{report}</pre>
+          <pre className="text-xs text-slate-700 dark:text-slate-200 whitespace-pre-wrap font-mono leading-relaxed">{report}</pre>
         </Card>
       )}
 
       {!entries.length && (
         <Card className="text-center py-8">
-          <p className="text-slate-400 text-sm">Log some episodes to generate reports.</p>
+          <p className="text-slate-400 dark:text-slate-500 text-sm">Log some episodes to generate reports.</p>
         </Card>
       )}
     </div>
