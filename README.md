@@ -1,65 +1,75 @@
-# migraine-tracker
+# Migraine Tracker
 
-A privacy-first migraine tracker focused on useful clinical data, fast daily logging, and actionable reporting.
+Migraine Tracker is a privacy-first web app for logging episodes, spotting patterns, and creating clinician-friendly reports.
 
-Yes — this is a completely static site (HTML/CSS/JS) and can be deployed on any static hosting platform.
+**Live site:** https://migraintrack.com
 
-## What this implementation includes
+## Highlights
 
-- Structured migraine diary fields:
-  - Date/time start, duration, pain level, food notes, hydration, sleep, activity impact
-  - Rescue medication + effectiveness
-  - Suspected triggers
-  - Optional ICHD-3-aligned symptom/attack characteristics (nausea, photophobia, phonophobia, aura, unilateral/pulsating/etc.)
-- UX for fast logging:
-  - Quick log flow with optional detailed clinical fields
-  - Autocomplete suggestions and quick-preset tap buttons for common values
-  - Low-friction local edit/delete
-  - Calendar and timeline views
-  - Streak output
-  - Browser reminder support
-  - Installable PWA with offline app-shell support
-- Reporting:
-  - 30/60/90 day summaries
-  - Severity, duration, med response, top triggers/foods
-  - Correlation-style pattern signals with confidence labels and non-causal framing
-  - Printable report for PDF generation (`Print/PDF report`)
-  - Raw CSV export
-- Clinical scores:
-  - HIT-6 calculator
-  - MIDAS calculator
-- Privacy/storage:
-  - Local-first storage (browser localStorage)
-  - Optional Google Drive backup/restore with least-privilege scopes (`drive.file` + `drive.appdata`)
-  - Client-side AES-GCM encryption before cloud upload
-  - Local data deletion controls
-  - Clear in-app messaging that data stays on-device unless user opts into encrypted Drive backup
+- Fast episode logging with pain, duration, triggers, medication response, hydration, sleep, and symptom details
+- Personal dashboard with recent episodes, streaks, and 30-day summary stats
+- Printable 30/60/90 day reports plus CSV export
+- HIT-6 and MIDAS assessments
+- Local-first data storage in the browser
+- Optional encrypted Google Drive backup and restore
+- Installable PWA with offline support and reminder-friendly settings
 
-## Run locally
+## Privacy
 
-No build tooling is required.
+Migraine Tracker stores data locally on your device by default. Cloud backup is optional, and backup payloads are encrypted in the browser before upload.
 
-1. Open `index.html` in a modern browser.
-2. Start logging entries.
+## Tech stack
 
-## PWA install
+- React 18
+- Vite 5
+- Tailwind CSS 3
+- Lucide React
 
-- The app includes a web manifest + service worker and supports install prompts where available.
-- If your browser does not show the in-app install button, use browser menu options like **Add to Home Screen** / **Install App**.
+## Getting started
 
-## Google Drive setup (optional)
+### Prerequisites
 
-To enable Drive backup/restore:
+- Node.js 20+
+- npm
 
-1. Create a Google OAuth client ID for a web app.
-2. Enter your client ID in the **Google OAuth Client ID** field, then click **Connect Google Drive**.
-3. Enter an encryption passphrase before backup/restore actions.
+### Run locally
 
-Notes:
-- Data is encrypted in-browser before upload.
-- Backup is stored in the app data area pattern (`appDataFolder` parent) and accessed via OAuth scopes.
+```bash
+npm ci
+npm run dev
+```
 
-## Important compliance caveat
+Open the local Vite URL shown in your terminal.
 
-This implementation is for wellness/self-tracking use and does **not** claim HIPAA-compliant clinical deployment by itself.
-For HIPAA-covered PHI workflows in the U.S., a compliant architecture is required (e.g., proper covered services, BAA, audit controls, governance).
+### Create a production build
+
+```bash
+npm run build
+```
+
+The production-ready files are generated in `dist/`.
+
+### Preview the production build
+
+```bash
+npm run preview
+```
+
+## Optional Google Drive backup
+
+To enable encrypted backup and restore:
+
+1. Create a Google OAuth client ID for a web application.
+2. Paste the client ID into **Settings → Privacy & backup**.
+3. Connect Google Drive.
+4. Enter an encryption passphrase before running backup or restore.
+
+The app uses limited Drive scopes and stores backups in the app data area.
+
+## Deployment
+
+GitHub Actions builds the app and updates the generated `dist/` assets used for deployment.
+
+## Disclaimer
+
+Migraine Tracker is intended for personal wellness and self-tracking. It is not a substitute for medical advice, diagnosis, or treatment, and it is not presented as a HIPAA-compliant clinical system by itself.
