@@ -16,6 +16,8 @@
 
 const CLIENT_ID =
   import.meta.env.VITE_GOOGLE_CLIENT_ID ||
+  // OAuth client IDs are public identifiers (not secrets); access is still
+  // constrained by Google-authorized JS origins + redirect URIs.
   '572277088448-1u6c9t2v8b8tba7g8ta2uma27ujald4t.apps.googleusercontent.com'
 
 if (!CLIENT_ID) {
