@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { markOnboardingDone } from '../utils/storage'
 import Button from './shared/Button'
-import { Brain, Globe, Bell, ArrowRight, CheckCircle } from 'lucide-react'
+import { Brain, Globe, Bell, ArrowRight, CheckCircle, Download } from 'lucide-react'
 
 const LANGUAGES = [
   { value: 'en', label: 'English' },
@@ -17,7 +17,7 @@ const TZ_LIST = (() => {
 const inputCls = 'w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400'
 const selectCls = inputCls
 
-export default function Onboarding({ preferences, savePreferences, onDone }) {
+export default function Onboarding({ preferences, savePreferences, pwaPrompt, onPwaInstalled, onDone }) {
   const [step, setStep] = useState(0)
   const [form, setForm] = useState({
     name:         preferences.name || '',
@@ -34,7 +34,19 @@ export default function Onboarding({ preferences, savePreferences, onDone }) {
     onDone()
   }
 
-  const STEPS = [
+  const [pwaInstalled, setPwaInstalled] = useState(false)
+
+  async function handleInstall() {
+    if (!pwaPrompt) return
+    pwaPrompt.prompt()
+    const { outcome } = await pwaPrompt.userChoice
+    if (outcome === 'accepted') {
+      setPwaInstalled(true)
+      onPwaInstalled?.()
+    }
+  }
+
+  const BASE_STEPS = [
     {
       icon: <Brain className="w-16 h-16 text-indigo-500" />,
       title: 'Welcome to Migraine Tracker',
@@ -103,6 +115,39 @@ export default function Onboarding({ preferences, savePreferences, onDone }) {
       )
     }
   ]
+
+  const INSTALL_STEP = {
+    icon: <Download className="w-12 h-12 text-indigo-500" />,
+    title: 'Install the app',
+    sub:   'Add Migraine Tracker to your home screen for instant access, even offline.',
+    body: (
+      <div className="space-y-4 text-center">
+        {pwaInstalled ? (
+          <div className="flex flex-col items-center gap-3">
+            <CheckCircle className="w-12 h-12 text-emerald-500" />
+            <p className="text-sm text-slate-600 font-medium">App installed successfully!</p>
+          </div>
+        ) : (
+          <>
+            <ul className="space-y-2 text-sm text-slate-600 text-left">
+              {['Works offline', 'No app store required', 'Instant launch from home screen'].map(f => (
+                <li key={f} className="flex items-center gap-3">
+                  <CheckCircle className="w-5 h-5 text-emerald-500 flex-shrink-0" />
+                  {f}
+                </li>
+              ))}
+            </ul>
+            <Button onClick={handleInstall} className="w-full justify-center">
+              <Download className="w-4 h-4" /> Install now
+            </Button>
+            <p className="text-xs text-slate-400">You can also install later from Settings.</p>
+          </>
+        )}
+      </div>
+    )
+  }
+
+  const STEPS = pwaPrompt ? [...BASE_STEPS, INSTALL_STEP] : BASE_STEPS
 
   const current  = STEPS[step]
   const isLast   = step === STEPS.length - 1

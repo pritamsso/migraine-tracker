@@ -3,7 +3,8 @@ import Card from '../shared/Card'
 import Button from '../shared/Button'
 import { PREF_KEY, STORAGE_KEY, ONBOARDING_KEY } from '../../utils/storage'
 import { encryptString, decryptString } from '../../utils/crypto'
-import { Settings, Shield, Trash2, CloudUpload, CloudDownload, Link2 } from 'lucide-react'
+import { startOAuthFlow, unlinkDrive, isDriveLinked } from '../../utils/googleDrive'
+import { Settings, Shield, Trash2, CloudUpload, CloudDownload, Link2, LogOut, Download } from 'lucide-react'
 
 const BACKUP_FILE = 'migraine-tracker-encrypted-backup.json'
 const LANGUAGES   = [
@@ -12,14 +13,17 @@ const LANGUAGES   = [
   { value: 'fr', label: 'Français' }
 ]
 
-export default function SettingsTab({ preferences, savePreferences, entries, replaceAll, addToast }) {
-  const [form,        setFormState] = useState({ ...preferences })
-  const [clientId,    setClientId]  = useState('')
-  const [passphrase,  setPassphrase]= useState('')
-  const [driveStatus, setDriveStatus] = useState('Not connected')
-  const [token,       setToken]     = useState(null)
-  const [saving,      setSaving]    = useState(false)
+export default function SettingsTab({
+  preferences, savePreferences, entries, replaceAll, addToast,
+  driveToken, setDriveToken, pwaPrompt, onPwaInstalled,
+}) {
+  const [form,       setFormState] = useState({ ...preferences })
+  const [passphrase, setPassphrase]= useState('')
+  const [saving,     setSaving]    = useState(false)
   const timerRef = useRef(null)
+
+  const linked    = isDriveLinked()
+  const connected = Boolean(driveToken)
 
   const inputCls = 'w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400'
 
@@ -47,52 +51,52 @@ export default function SettingsTab({ preferences, savePreferences, entries, rep
     addToast('Preferences saved!')
   }
 
-  async function connectDrive() {
-    if (!window.google?.accounts?.oauth2) { addToast('Google Identity unavailable.', 'error'); return }
-    const id = clientId.trim()
-    if (!id) { addToast('Enter your Google OAuth Client ID first.', 'warning'); return }
-    const tc = google.accounts.oauth2.initTokenClient({
-      client_id: id,
-      scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.appdata',
-      callback: r => { setToken(r.access_token); setDriveStatus('Connected ✓') }
-    })
-    tc.requestAccessToken({ prompt: 'consent' })
+  function connectDrive() {
+    startOAuthFlow().catch(err => addToast(err.message, 'error'))
+  }
+
+  function disconnectDrive() {
+    if (!confirm('Disconnect Google Drive? The app will no longer sync backups automatically.')) return
+    unlinkDrive()
+    setDriveToken(null)
+    addToast('Google Drive disconnected.')
   }
 
   async function backup() {
-    if (!token)      { addToast('Connect Google Drive first.', 'warning'); return }
-    if (!passphrase) { addToast('Enter a passphrase.', 'warning'); return }
+    if (!connected) { addToast('Connect Google Drive first.', 'warning'); return }
+    if (!passphrase) { addToast('Enter an encryption passphrase.', 'warning'); return }
     setSaving(true)
     try {
       const payload   = JSON.stringify({ entries, preferences })
       const encrypted = await encryptString(payload, passphrase)
       const body = new FormData()
       body.append('metadata', new Blob([JSON.stringify({ name: BACKUP_FILE, parents: ['appDataFolder'] })], { type: 'application/json' }))
-      body.append('file',     new Blob([JSON.stringify(encrypted)],  { type: 'application/json' }))
-      await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+      body.append('file',     new Blob([JSON.stringify(encrypted)], { type: 'application/json' }))
+      const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-        body
+        headers: { Authorization: `Bearer ${driveToken}` },
+        body,
       })
+      if (!res.ok) throw new Error(`Upload error ${res.status}`)
       addToast('Backup uploaded to Drive!')
-    } catch { addToast('Backup failed.', 'error') }
+    } catch (e) { addToast(`Backup failed: ${e.message}`, 'error') }
     setSaving(false)
   }
 
   async function restore() {
-    if (!token)      { addToast('Connect Google Drive first.', 'warning'); return }
-    if (!passphrase) { addToast('Enter a passphrase.', 'warning'); return }
+    if (!connected) { addToast('Connect Google Drive first.', 'warning'); return }
+    if (!passphrase) { addToast('Enter the encryption passphrase.', 'warning'); return }
     try {
       const q = encodeURIComponent(`name='${BACKUP_FILE}' and 'appDataFolder' in parents`)
       const searchRes = await fetch(
         `https://www.googleapis.com/drive/v3/files?q=${q}&spaces=appDataFolder&fields=files(id,name,modifiedTime)&orderBy=modifiedTime desc`,
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${driveToken}` } }
       )
       const { files } = await searchRes.json()
-      if (!files?.[0]) { addToast('No backup found.', 'warning'); return }
+      if (!files?.[0]) { addToast('No backup found in Drive.', 'warning'); return }
       const fileRes = await fetch(
         `https://www.googleapis.com/drive/v3/files/${files[0].id}?alt=media`,
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${driveToken}` } }
       )
       const enc  = await fileRes.json()
       const dec  = await decryptString(enc, passphrase)
@@ -100,7 +104,17 @@ export default function SettingsTab({ preferences, savePreferences, entries, rep
       replaceAll(data.entries || [])
       savePreferences({ ...preferences, ...(data.preferences || {}) })
       addToast('Restore complete!')
-    } catch { addToast('Restore failed. Check passphrase.', 'error') }
+    } catch { addToast('Restore failed. Check your passphrase.', 'error') }
+  }
+
+  async function installPwa() {
+    if (!pwaPrompt) return
+    pwaPrompt.prompt()
+    const { outcome } = await pwaPrompt.userChoice
+    if (outcome === 'accepted') {
+      onPwaInstalled?.()
+      addToast('App installed!')
+    }
   }
 
   function deleteAll() {
@@ -151,34 +165,70 @@ export default function SettingsTab({ preferences, savePreferences, entries, rep
           <h3 className="font-semibold text-slate-800">Privacy &amp; backup</h3>
         </div>
         <p className="text-xs text-slate-500 mb-3">
-          Data is stored locally by default. Enable encrypted Google Drive backup for cloud sync.
-          For HIPAA-covered workflows, ensure a properly compliant setup.
+          All data is stored locally by default. Connect Google Drive to enable
+          encrypted cloud backup. Your passphrase encrypts data before it ever
+          leaves your device — even the app cannot read it.
         </p>
+
+        {/* Drive connection status */}
+        <div className="flex items-center gap-2 mb-3">
+          <span className={`inline-block w-2 h-2 rounded-full ${connected ? 'bg-emerald-400' : linked ? 'bg-amber-400' : 'bg-slate-300'}`} />
+          <span className="text-xs text-slate-500">
+            {connected ? 'Drive connected' : linked ? 'Reconnecting…' : 'Drive not connected'}
+          </span>
+        </div>
+
         <div className="space-y-3">
-          <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">Google OAuth Client ID (optional)</label>
-            <input value={clientId} onChange={e => setClientId(e.target.value)}
-              placeholder="Paste your OAuth Client ID" className={inputCls} />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">Encryption passphrase</label>
-            <input type="password" value={passphrase} onChange={e => setPassphrase(e.target.value)}
-              placeholder="Strong passphrase" className={inputCls} />
-          </div>
-          <p className="text-xs text-slate-400">Drive status: {driveStatus}</p>
-          <div className="flex flex-wrap gap-2">
+          {!linked ? (
             <Button variant="secondary" onClick={connectDrive}>
-              <Link2 className="w-4 h-4" /> Connect Drive
+              <Link2 className="w-4 h-4" /> Connect Google Drive
             </Button>
-            <Button variant="secondary" onClick={backup} disabled={saving}>
-              <CloudUpload className="w-4 h-4" /> {saving ? 'Uploading…' : 'Backup'}
-            </Button>
-            <Button variant="secondary" onClick={restore}>
-              <CloudDownload className="w-4 h-4" /> Restore
-            </Button>
-          </div>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              <Button variant="secondary" onClick={disconnectDrive}>
+                <LogOut className="w-4 h-4" /> Disconnect Drive
+              </Button>
+            </div>
+          )}
+
+          {linked && (
+            <>
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">Encryption passphrase</label>
+                <input type="password" value={passphrase} onChange={e => setPassphrase(e.target.value)}
+                  placeholder="Strong passphrase (never stored)" className={inputCls} />
+                <p className="text-xs text-slate-400 mt-1">
+                  Required for each backup/restore. Keep it safe — lost passphrases cannot be recovered.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button variant="secondary" onClick={backup} disabled={saving}>
+                  <CloudUpload className="w-4 h-4" /> {saving ? 'Uploading…' : 'Backup now'}
+                </Button>
+                <Button variant="secondary" onClick={restore}>
+                  <CloudDownload className="w-4 h-4" /> Restore
+                </Button>
+              </div>
+            </>
+          )}
         </div>
       </Card>
+
+      {/* Install app */}
+      {pwaPrompt && (
+        <Card>
+          <div className="flex items-center gap-2 mb-3">
+            <Download className="w-4 h-4 text-indigo-500" />
+            <h3 className="font-semibold text-slate-800">Install app</h3>
+          </div>
+          <p className="text-xs text-slate-500 mb-3">
+            Install Migraine Tracker on your device for a faster, offline-ready experience.
+          </p>
+          <Button onClick={installPwa}>
+            <Download className="w-4 h-4" /> Install app
+          </Button>
+        </Card>
+      )}
 
       {/* Danger zone */}
       <Card>
