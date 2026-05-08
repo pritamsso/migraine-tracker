@@ -90,26 +90,29 @@ export default function SettingsTab({
 
   async function restore() {
     if (!connected) { addToast('Connect Google Drive first.', 'warning'); return }
-    if (!passphrase) { addToast('Enter the encryption passphrase.', 'warning'); return }
+    if (!passphrase) { addToast('Enter your backup password.', 'warning'); return }
     try {
       const q = encodeURIComponent(`name='${BACKUP_FILE}' and 'appDataFolder' in parents`)
       const searchRes = await fetch(
         `https://www.googleapis.com/drive/v3/files?q=${q}&spaces=appDataFolder&fields=files(id,name,modifiedTime)&orderBy=modifiedTime desc`,
         { headers: { Authorization: `Bearer ${driveToken}` } }
       )
+      if (!searchRes.ok) throw new Error(`Drive search failed (${searchRes.status})`)
       const { files } = await searchRes.json()
       if (!files?.[0]) { addToast('No backup found in Drive.', 'warning'); return }
       const fileRes = await fetch(
         `https://www.googleapis.com/drive/v3/files/${files[0].id}?alt=media`,
         { headers: { Authorization: `Bearer ${driveToken}` } }
       )
+      if (!fileRes.ok) throw new Error(`Backup download failed (${fileRes.status})`)
       const enc  = await fileRes.json()
       const dec  = await decryptString(enc, passphrase)
       const data = JSON.parse(dec)
+      if (!data || typeof data !== 'object') throw new Error('Backup file is invalid')
       replaceAll(data.entries || [])
       savePreferences({ ...preferences, ...(data.preferences || {}) })
       addToast('Restore complete!')
-    } catch { addToast('Restore failed. Check your passphrase.', 'error') }
+    } catch { addToast('Restore failed. Please check your backup password and try again.', 'error') }
   }
 
   async function installPwa() {
@@ -207,9 +210,9 @@ export default function SettingsTab({
               <div>
                 <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Encryption passphrase</label>
                 <input type="password" value={passphrase} onChange={e => setPassphrase(e.target.value)}
-                  placeholder="Strong passphrase (never stored)" className={inputCls} />
+                  placeholder="Backup password (never saved by the app)" className={inputCls} />
                 <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
-                  Required for each backup/restore. Keep it safe — lost passphrases cannot be recovered.
+                  Required for backup and restore. Keep it safe — if lost, your backup cannot be opened.
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -241,11 +244,11 @@ export default function SettingsTab({
         </Card>
       )}
 
-      {/* Danger zone */}
+      {/* Delete data */}
       <Card>
         <div className="flex items-center gap-2 mb-3">
           <Trash2 className="w-4 h-4 text-red-400" />
-          <h3 className="font-semibold text-slate-800 dark:text-slate-100">Danger zone</h3>
+          <h3 className="font-semibold text-slate-800 dark:text-slate-100">Delete data</h3>
         </div>
         <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
           Permanently delete all local data including entries and preferences.

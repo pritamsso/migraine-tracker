@@ -56,13 +56,13 @@ export default function Onboarding({ preferences, savePreferences, pwaPrompt, on
     {
       icon: <Brain className="w-16 h-16 text-indigo-500" />,
       title: 'Welcome to Migraine Tracker',
-      sub:   'Your private, clinician-ready migraine diary. Track patterns, understand triggers, share insights with your doctor.',
+      sub:   'Your private migraine diary. Track patterns, understand triggers, and share summaries with your doctor.',
       body: (
         <ul className="space-y-3 text-sm text-slate-600 dark:text-slate-300">
           {[
             'Log episodes in under 60 seconds',
             'Spot patterns with smart insights',
-            'Generate clinician-ready PDF reports',
+            'Create clear report summaries',
             'Your data stays private on your device'
           ].map(f => (
             <li key={f} className="flex items-center gap-3">

@@ -14,7 +14,13 @@ export default function Assessments() {
   const [midasResult, setMidasResult] = useState('')
 
   function calcHit6() {
-    const score = csvToNums(hit6Input).reduce((s, v) => s + v, 0)
+    const values = csvToNums(hit6Input)
+    const validOptions = new Set([6, 8, 10, 11, 13])
+    if (values.length !== 6 || values.some(v => !validOptions.has(v))) {
+      setHit6Result('Please enter exactly 6 values using only: 6, 8, 10, 11, 13.')
+      return
+    }
+    const score = values.reduce((s, v) => s + v, 0)
     const cat =
       score >= 60 ? 'Severe impact' :
       score >= 56 ? 'Substantial impact' :
@@ -24,7 +30,12 @@ export default function Assessments() {
   }
 
   function calcMidas() {
-    const score = csvToNums(midasInput).reduce((s, v) => s + v, 0)
+    const values = csvToNums(midasInput)
+    if (values.length !== 5 || values.some(v => v < 0)) {
+      setMidasResult('Please enter exactly 5 values, and use 0 or higher for each.')
+      return
+    }
+    const score = values.reduce((s, v) => s + v, 0)
     const grade =
       score >= 21 ? 'Grade IV — Severe disability' :
       score >= 11 ? 'Grade III — Moderate disability' :
