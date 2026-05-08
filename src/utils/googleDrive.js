@@ -47,6 +47,10 @@ function base64UrlEncode(buffer) {
     .replace(/=+$/, '')
 }
 
+function generateOAuthState() {
+  return base64UrlEncode(crypto.getRandomValues(new Uint8Array(16)).buffer)
+}
+
 function calculateAccessTokenExpiry(expiresInSeconds) {
   return Date.now() + Math.max(
     (Number(expiresInSeconds) || DEFAULT_ACCESS_TOKEN_LIFETIME_SECONDS) - ACCESS_TOKEN_EXPIRY_BUFFER_SECONDS,
@@ -75,7 +79,7 @@ function getValidStoredAccessToken() {
 export async function startOAuthFlow() {
   if (!CLIENT_ID) throw new Error('Google Client ID is not configured for this app.')
 
-  const state      = base64UrlEncode(crypto.getRandomValues(new Uint8Array(16)).buffer)
+  const state      = generateOAuthState()
   const redirectUri = `${window.location.origin}/`
 
   sessionStorage.setItem('_oauthState', state)
