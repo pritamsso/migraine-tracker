@@ -20,7 +20,10 @@ export default function App() {
 
   // Handle OAuth redirect callback or silently refresh on load
   useEffect(() => {
-    if (window.location.search.includes('code=')) {
+    if (
+      window.location.hash.includes('access_token=') ||
+      window.location.hash.includes('error=')
+    ) {
       handleOAuthCallback()
         .then(token => {
           if (token) {

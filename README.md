@@ -65,7 +65,7 @@ To enable encrypted backup and restore:
 4. Enter an encryption passphrase before running backup or restore.
 
 The app uses limited Drive scopes and stores backups in the app data area.
-Google OAuth is handled with Authorization Code + PKCE in strict secretless mode:
+Google OAuth is handled with JavaScript implicit flow in strict secretless mode:
 no client secret and no refresh-token grant.
 Drive connection remains active only for the current browser session, so users
 must re-authorize Google Drive after restarting the browser/app session.

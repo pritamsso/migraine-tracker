@@ -1,11 +1,9 @@
 /**
- * Google Drive OAuth 2.0 — Authorization Code + PKCE flow.
+ * Google Drive OAuth 2.0 — JavaScript implicit flow.
  *
  * The OAuth Client ID is a PUBLIC identifier (visible in every auth URL) and is
- * safe to embed in frontend code.  No client_secret is required; PKCE replaces
- * the secret and is Google's recommended approach for browser-based public clients.
- * This implementation is intentionally strict secretless: it does not use
- * refresh_token grant flows or any client secret.
+ * safe to embed in frontend code. This implementation is intentionally secretless:
+ * it does not use refresh_token grant flows or any client secret.
  *
  * Setup checklist (Google Cloud Console):
  *   1. Create an OAuth 2.0 Client ID (Application type: Web application).
@@ -35,7 +33,6 @@ if (!CLIENT_ID) {
 const SCOPES = 'https://www.googleapis.com/auth/drive.appdata'
 
 const AUTH_ENDPOINT  = 'https://accounts.google.com/o/oauth2/v2/auth'
-const TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token'
 const ACCESS_KEY     = 'migraineDrive.accessToken'
 const EXPIRES_AT_KEY = 'migraineDrive.accessTokenExpiresAt'
 const REFRESH_KEY    = 'migraineDrive.refreshToken' // legacy key cleanup only
@@ -43,27 +40,11 @@ const ACCESS_TOKEN_EXPIRY_BUFFER_SECONDS = 30
 const MIN_ACCESS_TOKEN_LIFETIME_SECONDS = 60
 const DEFAULT_ACCESS_TOKEN_LIFETIME_SECONDS = 3600
 
-// ── PKCE helpers ──────────────────────────────────────────────────────────────
-
 function base64UrlEncode(buffer) {
   return btoa(String.fromCharCode(...new Uint8Array(buffer)))
     .replace(/\+/g, '-')
     .replace(/\//g, '_')
     .replace(/=+$/, '')
-}
-
-function generateCodeVerifier() {
-  const bytes = new Uint8Array(32)
-  crypto.getRandomValues(bytes)
-  return base64UrlEncode(bytes.buffer)
-}
-
-async function generateCodeChallenge(verifier) {
-  const hash = await crypto.subtle.digest(
-    'SHA-256',
-    new TextEncoder().encode(verifier)
-  )
-  return base64UrlEncode(hash)
 }
 
 function calculateAccessTokenExpiry(expiresInSeconds) {
@@ -88,28 +69,24 @@ function getValidStoredAccessToken() {
 
 /**
  * Redirect the browser to Google's consent screen.
- * Stores the PKCE code_verifier + state in sessionStorage so they survive the
- * redirect and can be verified when Google sends the user back.
+ * Stores state in sessionStorage so it survives the redirect and can be
+ * verified when Google sends the user back.
  */
 export async function startOAuthFlow() {
   if (!CLIENT_ID) throw new Error('Google Client ID is not configured for this app.')
 
-  const verifier   = generateCodeVerifier()
-  const challenge  = await generateCodeChallenge(verifier)
   const state      = base64UrlEncode(crypto.getRandomValues(new Uint8Array(16)).buffer)
   const redirectUri = `${window.location.origin}/`
 
-  sessionStorage.setItem('_oauthVerifier', verifier)
-  sessionStorage.setItem('_oauthState',    state)
+  sessionStorage.setItem('_oauthState', state)
 
   const params = new URLSearchParams({
-    client_id:             CLIENT_ID,
-    redirect_uri:          redirectUri,
-    response_type:         'code',
-    scope:                 SCOPES,
-    code_challenge:        challenge,
-    code_challenge_method: 'S256',
-    prompt:                'select_account',
+    client_id: CLIENT_ID,
+    redirect_uri: redirectUri,
+    response_type: 'token',
+    scope: SCOPES,
+    include_granted_scopes: 'true',
+    prompt: 'select_account',
     state,
   })
 
@@ -117,63 +94,41 @@ export async function startOAuthFlow() {
 }
 
 /**
- * Call once on app initialisation.  When Google redirects back with ?code=…,
- * this exchanges the authorisation code for tokens using PKCE (no secret needed),
- * stores only the short-lived access token in sessionStorage, and cleans up the URL.
+ * Call once on app initialisation. When Google redirects back with #access_token=…,
+ * this stores the short-lived access token in sessionStorage, and cleans up the URL.
  *
- * @returns {Promise<string|null>} access_token on success, null if no code present.
+ * @returns {Promise<string|null>} access_token on success, null if no callback data present.
  */
 export async function handleOAuthCallback() {
-  const params = new URLSearchParams(window.location.search)
-  const code   = params.get('code')
-  const state  = params.get('state')
-  const error  = params.get('error')
+  const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''))
+  const accessToken = hashParams.get('access_token')
+  const expiresIn = hashParams.get('expires_in')
+  const state = hashParams.get('state')
+  const error = hashParams.get('error')
+  const errorDescription = hashParams.get('error_description')
 
-  if (!code) return null
+  if (!accessToken && !error) return null
 
-  // Always clear the URL regardless of outcome
+  // Always clear OAuth data from the URL regardless of outcome
   history.replaceState({}, '', window.location.pathname)
 
-  if (error) throw new Error(`Google authorisation error: ${error}`)
+  if (error) {
+    throw new Error(
+      `Google authorisation error: ${errorDescription || error}`
+    )
+  }
 
   const savedState = sessionStorage.getItem('_oauthState')
+  sessionStorage.removeItem('_oauthState')
   if (!savedState || state !== savedState) {
     throw new Error('Security error: state mismatch. Please try again.')
   }
 
-  const verifier = sessionStorage.getItem('_oauthVerifier')
-  sessionStorage.removeItem('_oauthVerifier')
-  sessionStorage.removeItem('_oauthState')
-  if (!verifier) {
-    throw new Error('Security error: missing PKCE verifier. Please restart the authorization process.')
-  }
-
-  const res = await fetch(TOKEN_ENDPOINT, {
-    method:  'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      code,
-      client_id:     CLIENT_ID,
-      code_verifier: verifier,
-      redirect_uri:  `${window.location.origin}/`,
-      grant_type:    'authorization_code',
-    }),
-  })
-
-  if (!res.ok) {
-    const text = await res.text()
-    throw new Error(`Token exchange failed: ${text}`)
-  }
-
-  const data = await res.json()
-
-  if (data.access_token) {
-    sessionStorage.setItem(ACCESS_KEY, data.access_token)
-    sessionStorage.setItem(EXPIRES_AT_KEY, String(calculateAccessTokenExpiry(data.expires_in)))
-  }
+  sessionStorage.setItem(ACCESS_KEY, accessToken)
+  sessionStorage.setItem(EXPIRES_AT_KEY, String(calculateAccessTokenExpiry(expiresIn)))
   localStorage.removeItem(REFRESH_KEY)
 
-  return data.access_token || null
+  return accessToken
 }
 
 /**
