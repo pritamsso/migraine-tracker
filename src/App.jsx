@@ -33,7 +33,7 @@ export default function App() {
     } else if (isDriveLinked()) {
       refreshAccessToken().then(token => { if (token) setDriveToken(token) })
     }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [addToast])
 
   // Capture the PWA install prompt so we can show it at the right moment
   useEffect(() => {

@@ -16,6 +16,14 @@
 
 const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
 
+if (!CLIENT_ID) {
+  console.warn(
+    '[googleDrive] VITE_GOOGLE_CLIENT_ID is not set. ' +
+    'Google Drive backup will be unavailable. ' +
+    'See .env.example for setup instructions.'
+  )
+}
+
 // Minimal scope: access only the app's hidden AppData folder in Drive.
 // Users cannot see these files in their own Drive UI.
 const SCOPES = 'https://www.googleapis.com/auth/drive.appdata'
