@@ -136,7 +136,9 @@ export async function handleOAuthCallback() {
   }
 
   sessionStorage.setItem(ACCESS_KEY, accessToken)
-  const expiresAt = calculateAccessTokenExpiry(expiresIn || DEFAULT_ACCESS_TOKEN_LIFETIME_SECONDS)
+  const expiresAt = calculateAccessTokenExpiry(
+    Number(expiresIn) || DEFAULT_ACCESS_TOKEN_LIFETIME_SECONDS
+  )
   sessionStorage.setItem(EXPIRES_AT_KEY, String(expiresAt))
   localStorage.removeItem(REFRESH_KEY)
 
