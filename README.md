@@ -67,6 +67,8 @@ To enable encrypted backup and restore:
 The app uses limited Drive scopes and stores backups in the app data area.
 Google OAuth is handled with JavaScript implicit flow in strict secretless mode:
 no client secret and no refresh-token grant.
+This flow is less preferred than Authorization Code + PKCE in modern OAuth
+guidance, but is intentionally used here for direct token-return compatibility.
 Drive connection remains active only for the current browser session, so users
 must re-authorize Google Drive after restarting the browser/app session.
 

@@ -49,7 +49,7 @@ function base64UrlEncode(buffer) {
 }
 
 function generateOAuthState() {
-  return base64UrlEncode(crypto.getRandomValues(new Uint8Array(16)).buffer)
+  return base64UrlEncode(crypto.getRandomValues(new Uint8Array(32)).buffer)
 }
 
 async function hashTextBase64Url(value) {
@@ -136,8 +136,9 @@ export async function handleOAuthCallback() {
   }
 
   sessionStorage.setItem(ACCESS_KEY, accessToken)
+  const parsedExpiresIn = Number.parseInt(String(expiresIn ?? ''), 10)
   const expiresAt = calculateAccessTokenExpiry(
-    Number(expiresIn) || DEFAULT_ACCESS_TOKEN_LIFETIME_SECONDS
+    Number.isNaN(parsedExpiresIn) ? DEFAULT_ACCESS_TOKEN_LIFETIME_SECONDS : parsedExpiresIn
   )
   sessionStorage.setItem(EXPIRES_AT_KEY, String(expiresAt))
   localStorage.removeItem(REFRESH_KEY)
