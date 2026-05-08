@@ -31,5 +31,5 @@ jobs:
             echo "No dist changes to commit."
             exit 0
           fi
-          git commit -m "chore: update dist for deployment [skip ci]"
+          git commit -m "chore: update dist for deployment"
           git push origin HEAD:main
