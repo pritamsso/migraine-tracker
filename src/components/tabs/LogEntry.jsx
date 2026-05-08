@@ -7,6 +7,7 @@ const FOOD_SUGS     = ['Aged cheese', 'Chocolate', 'Processed meat', 'Red wine',
 const MED_SUGS      = ['Ibuprofen 400mg', 'Naproxen 500mg', 'Sumatriptan 50mg', 'Rizatriptan 10mg', 'Acetaminophen 500mg']
 const TRIGGER_SUGS  = ['Stress', '<6h sleep', 'Dehydration', 'Weather change', 'Hormonal', 'Bright light', 'Loud noise']
 const ACTIVITY_SUGS = ['Missed work', 'Reduced productivity', 'Could not exercise', 'Stayed in bed', 'Missed social activity']
+const CYCLE_PHASES  = ['Not tracked', 'Menstrual', 'Follicular', 'Ovulation', 'Luteal', 'Postpartum', 'Perimenopause', 'Other']
 
 function localNow() {
   const d = new Date()
@@ -16,7 +17,7 @@ function localNow() {
 
 const BASE = {
   startTime: '', durationMinutes: 60, painLevel: 5,
-  foodNotes: '', hydrationLiters: 1.5, sleepHours: 7,
+  foodNotes: '', hydrationLiters: 1.5, sleepHours: 7, stressLevel: 5, cyclePhase: 'Not tracked',
   rescueMed: '', medEffective: 'unknown', suspectedTrigger: '',
   activityImpact: '', notes: '',
   symptomNausea: false, symptomPhoto: false, symptomPhono: false, symptomAura: false,
@@ -24,9 +25,9 @@ const BASE = {
   consent: false
 }
 
-const inputCls = 'w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400'
+const inputCls = 'w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400'
 
-function ChipRow({ options, field, form, set, activeClass = 'bg-indigo-500 text-white', inactiveClass = 'bg-slate-100 text-slate-600 hover:bg-slate-200' }) {
+function ChipRow({ options, field, form, set, activeClass = 'bg-indigo-500 text-white', inactiveClass = 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700' }) {
   return (
     <div className="flex flex-wrap gap-1.5 mt-1.5">
       {options.map(opt => (
@@ -56,6 +57,8 @@ export default function LogEntry({ addEntry, updateEntry, editingEntry, setEditi
         foodNotes:        editingEntry.foodNotes || '',
         hydrationLiters:  editingEntry.hydrationLiters,
         sleepHours:       editingEntry.sleepHours,
+        stressLevel:      editingEntry.stressLevel ?? 5,
+        cyclePhase:       editingEntry.cyclePhase || 'Not tracked',
         rescueMed:        editingEntry.rescueMed || '',
         medEffective:     editingEntry.medEffective || 'unknown',
         suspectedTrigger: editingEntry.suspectedTrigger || '',
@@ -91,6 +94,8 @@ export default function LogEntry({ addEntry, updateEntry, editingEntry, setEditi
       foodNotes:        form.foodNotes,
       hydrationLiters:  Number(form.hydrationLiters),
       sleepHours:       Number(form.sleepHours),
+      stressLevel:      Number(form.stressLevel),
+      cyclePhase:       form.cyclePhase,
       rescueMed:        form.rescueMed,
       medEffective:     form.medEffective,
       suspectedTrigger: form.suspectedTrigger,
@@ -123,16 +128,16 @@ export default function LogEntry({ addEntry, updateEntry, editingEntry, setEditi
   }
 
   const SectionLabel = ({ children }) => (
-    <h3 className="font-semibold text-slate-800 text-sm mb-3">{children}</h3>
+    <h3 className="font-semibold text-slate-800 dark:text-slate-100 text-sm mb-3">{children}</h3>
   )
   const FieldLabel = ({ children }) => (
-    <label className="block text-xs font-medium text-slate-600 mb-1">{children}</label>
+    <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">{children}</label>
   )
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-bold text-slate-900">
+        <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">
           {editingEntry ? 'Edit episode' : 'Log episode'}
         </h2>
         {editingEntry && (
@@ -205,6 +210,21 @@ export default function LogEntry({ addEntry, updateEntry, editingEntry, setEditi
                 field="sleepHours" form={form} set={set}
               />
             </div>
+            <div>
+              <FieldLabel>Stress level (0–10)</FieldLabel>
+              <input type="number" min="0" max="10" value={form.stressLevel}
+                onChange={e => set('stressLevel', e.target.value)} className={inputCls} />
+              <ChipRow
+                options={[{label:'2',value:2},{label:'4',value:4},{label:'6',value:6},{label:'8',value:8}]}
+                field="stressLevel" form={form} set={set}
+              />
+            </div>
+            <div>
+              <FieldLabel>Hormonal cycle phase</FieldLabel>
+              <select value={form.cyclePhase} onChange={e => set('cyclePhase', e.target.value)} className={inputCls}>
+                {CYCLE_PHASES.map(phase => <option key={phase} value={phase}>{phase}</option>)}
+              </select>
+            </div>
           </div>
         </Card>
 
@@ -245,9 +265,9 @@ export default function LogEntry({ addEntry, updateEntry, editingEntry, setEditi
                 <button key={t} type="button"
                   onClick={() => set('suspectedTrigger', t)}
                   className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
-                    form.suspectedTrigger === t
-                      ? 'bg-amber-500 text-white'
-                      : 'bg-amber-50 text-amber-700 hover:bg-amber-100'
+                      form.suspectedTrigger === t
+                        ? 'bg-amber-500 text-white'
+                      : 'bg-amber-50 text-amber-700 hover:bg-amber-100 dark:bg-amber-950/40 dark:text-amber-300 dark:hover:bg-amber-900/50'
                   }`}
                 >
                   {t}
@@ -268,11 +288,11 @@ export default function LogEntry({ addEntry, updateEntry, editingEntry, setEditi
         {/* ── Clinical (expandable) ── */}
         <Card>
           <button type="button" onClick={() => setShowClinical(v => !v)}
-            className="w-full flex items-center justify-between text-sm font-semibold text-slate-800">
+            className="w-full flex items-center justify-between text-sm font-semibold text-slate-800 dark:text-slate-100">
             Clinical fields (optional)
             {showClinical
-              ? <ChevronUp className="w-4 h-4 text-slate-400" />
-              : <ChevronDown className="w-4 h-4 text-slate-400" />}
+              ? <ChevronUp className="w-4 h-4 text-slate-400 dark:text-slate-500" />
+              : <ChevronDown className="w-4 h-4 text-slate-400 dark:text-slate-500" />}
           </button>
 
           {showClinical && (
@@ -288,9 +308,9 @@ export default function LogEntry({ addEntry, updateEntry, editingEntry, setEditi
                   ['ichdAggravatedByActivity', 'Aggravated by activity'],
                   ['ichdModerateSevere',       'Moderate/severe']
                 ].map(([k, lbl]) => (
-                  <label key={k} className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer">
+                  <label key={k} className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 cursor-pointer">
                     <input type="checkbox" checked={form[k]} onChange={e => set(k, e.target.checked)}
-                      className="w-4 h-4 rounded text-indigo-500 focus:ring-indigo-400" />
+                      className="w-4 h-4 rounded bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 text-indigo-500 focus:ring-indigo-400" />
                     {lbl}
                   </label>
                 ))}
@@ -308,8 +328,8 @@ export default function LogEntry({ addEntry, updateEntry, editingEntry, setEditi
         <Card>
           <label className="flex items-start gap-3 cursor-pointer mb-4">
             <input type="checkbox" checked={form.consent} onChange={e => set('consent', e.target.checked)}
-              className="w-4 h-4 mt-0.5 rounded text-indigo-500 focus:ring-indigo-400 flex-shrink-0" />
-            <span className="text-xs text-slate-600">
+              className="w-4 h-4 mt-0.5 rounded bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 text-indigo-500 focus:ring-indigo-400 flex-shrink-0" />
+            <span className="text-xs text-slate-600 dark:text-slate-300">
               I consent to processing this health data locally on my device and (optionally) in my own Google Drive.
             </span>
           </label>

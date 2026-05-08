@@ -4,6 +4,7 @@ import { PREF_KEY, loadJson, saveJson } from '../utils/storage'
 const DEFAULTS = {
   name: '',
   language: 'en',
+  theme: 'system',
   reminderTime: '20:00',
   timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
 }

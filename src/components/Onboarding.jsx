@@ -8,13 +8,18 @@ const LANGUAGES = [
   { value: 'es', label: 'Español' },
   { value: 'fr', label: 'Français' }
 ]
+const THEMES = [
+  { value: 'system', label: 'System' },
+  { value: 'light', label: 'Light' },
+  { value: 'dark', label: 'Dark' }
+]
 
 // Build timezone list with graceful fallback for older browsers
 const TZ_LIST = (() => {
   try { return Intl.supportedValuesOf('timeZone') } catch { return [] }
 })()
 
-const inputCls = 'w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400'
+const inputCls = 'w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-400'
 const selectCls = inputCls
 
 export default function Onboarding({ preferences, savePreferences, pwaPrompt, onPwaInstalled, onDone }) {
@@ -22,6 +27,7 @@ export default function Onboarding({ preferences, savePreferences, pwaPrompt, on
   const [form, setForm] = useState({
     name:         preferences.name || '',
     language:     preferences.language || 'en',
+    theme:        preferences.theme || 'system',
     timezone:     preferences.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
     reminderTime: preferences.reminderTime || '20:00'
   })
@@ -52,7 +58,7 @@ export default function Onboarding({ preferences, savePreferences, pwaPrompt, on
       title: 'Welcome to Migraine Tracker',
       sub:   'Your private, clinician-ready migraine diary. Track patterns, understand triggers, share insights with your doctor.',
       body: (
-        <ul className="space-y-3 text-sm text-slate-600">
+        <ul className="space-y-3 text-sm text-slate-600 dark:text-slate-300">
           {[
             'Log episodes in under 60 seconds',
             'Spot patterns with smart insights',
@@ -74,24 +80,30 @@ export default function Onboarding({ preferences, savePreferences, pwaPrompt, on
       body: (
         <div className="space-y-4">
           <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">Your name (optional)</label>
+            <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Your name (optional)</label>
             <input value={form.name} onChange={e => set('name', e.target.value)}
               placeholder="e.g. Alex" className={inputCls} />
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">Language</label>
+            <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Language</label>
             <select value={form.language} onChange={e => set('language', e.target.value)} className={selectCls}>
               {LANGUAGES.map(l => <option key={l.value} value={l.value}>{l.label}</option>)}
             </select>
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">Timezone</label>
+            <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Theme</label>
+            <select value={form.theme} onChange={e => set('theme', e.target.value)} className={selectCls}>
+              {THEMES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Timezone</label>
             {TZ_LIST.length > 0 ? (
               <select value={form.timezone} onChange={e => set('timezone', e.target.value)} className={selectCls}>
                 {TZ_LIST.map(tz => <option key={tz} value={tz}>{tz}</option>)}
               </select>
             ) : (
-              <input value={form.timezone} readOnly className={inputCls + ' bg-slate-50'} />
+              <input value={form.timezone} readOnly className={inputCls + ' bg-slate-50 dark:bg-slate-800'} />
             )}
           </div>
         </div>
@@ -104,11 +116,11 @@ export default function Onboarding({ preferences, savePreferences, pwaPrompt, on
       body: (
         <div className="space-y-4">
           <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">Reminder time</label>
+            <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Reminder time</label>
             <input type="time" value={form.reminderTime}
               onChange={e => set('reminderTime', e.target.value)} className={inputCls} />
           </div>
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-slate-400 dark:text-slate-500">
             You can change this anytime in Settings. Notifications require browser permission when saving.
           </p>
         </div>
@@ -125,11 +137,11 @@ export default function Onboarding({ preferences, savePreferences, pwaPrompt, on
         {pwaInstalled ? (
           <div className="flex flex-col items-center gap-3">
             <CheckCircle className="w-12 h-12 text-emerald-500" />
-            <p className="text-sm text-slate-600 font-medium">App installed successfully!</p>
+            <p className="text-sm text-slate-600 dark:text-slate-300 font-medium">App installed successfully!</p>
           </div>
         ) : (
           <>
-            <ul className="space-y-2 text-sm text-slate-600 text-left">
+            <ul className="space-y-2 text-sm text-slate-600 dark:text-slate-300 text-left">
               {['Works offline', 'No app store required', 'Instant launch from home screen'].map(f => (
                 <li key={f} className="flex items-center gap-3">
                   <CheckCircle className="w-5 h-5 text-emerald-500 flex-shrink-0" />
@@ -140,7 +152,7 @@ export default function Onboarding({ preferences, savePreferences, pwaPrompt, on
             <Button onClick={handleInstall} className="w-full justify-center">
               <Download className="w-4 h-4" /> Install now
             </Button>
-            <p className="text-xs text-slate-400">You can also install later from Settings.</p>
+            <p className="text-xs text-slate-400 dark:text-slate-500">You can also install later from Settings.</p>
           </>
         )}
       </div>
@@ -154,10 +166,10 @@ export default function Onboarding({ preferences, savePreferences, pwaPrompt, on
   const progress = ((step + 1) / STEPS.length) * 100
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-violet-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-white rounded-3xl shadow-xl overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-violet-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 flex items-center justify-center p-4">
+      <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl shadow-xl overflow-hidden border border-slate-100 dark:border-slate-800">
         {/* Progress bar */}
-        <div className="h-1 bg-slate-100">
+        <div className="h-1 bg-slate-100 dark:bg-slate-800">
           <div className="h-full bg-indigo-500 transition-all duration-500" style={{ width: `${progress}%` }} />
         </div>
 
@@ -166,17 +178,17 @@ export default function Onboarding({ preferences, savePreferences, pwaPrompt, on
           <div className="flex gap-1.5 mb-8">
             {STEPS.map((_, i) => (
               <div key={i}
-                className={`h-1.5 flex-1 rounded-full transition-all ${i <= step ? 'bg-indigo-500' : 'bg-slate-200'}`}
-              />
-            ))}
-          </div>
+                  className={`h-1.5 flex-1 rounded-full transition-all ${i <= step ? 'bg-indigo-500' : 'bg-slate-200 dark:bg-slate-700'}`}
+                />
+              ))}
+            </div>
 
           {/* Icon */}
           <div className="flex justify-center mb-6">{current.icon}</div>
 
           {/* Title + subtitle */}
-          <h1 className="text-2xl font-bold text-slate-900 text-center mb-2">{current.title}</h1>
-          <p className="text-sm text-slate-500 text-center mb-8">{current.sub}</p>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 text-center mb-2">{current.title}</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400 text-center mb-8">{current.sub}</p>
 
           {/* Step body */}
           <div className="mb-8">{current.body}</div>

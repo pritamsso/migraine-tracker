@@ -12,6 +12,11 @@ const LANGUAGES   = [
   { value: 'es', label: 'Español'  },
   { value: 'fr', label: 'Français' }
 ]
+const THEMES = [
+  { value: 'system', label: 'System' },
+  { value: 'light', label: 'Light' },
+  { value: 'dark', label: 'Dark' }
+]
 
 export default function SettingsTab({
   preferences, savePreferences, entries, replaceAll, addToast,
@@ -25,7 +30,7 @@ export default function SettingsTab({
   const linked    = isDriveLinked()
   const connected = Boolean(driveToken)
 
-  const inputCls = 'w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400'
+  const inputCls = 'w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400'
 
   function setForm(k, v) { setFormState(p => ({ ...p, [k]: v })) }
 
@@ -131,26 +136,32 @@ export default function SettingsTab({
       <Card>
         <div className="flex items-center gap-2 mb-4">
           <Settings className="w-4 h-4 text-indigo-500" />
-          <h3 className="font-semibold text-slate-800">Preferences</h3>
+          <h3 className="font-semibold text-slate-800 dark:text-slate-100">Preferences</h3>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">Your name</label>
+            <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Your name</label>
             <input value={form.name || ''} onChange={e => setForm('name', e.target.value)}
               placeholder="Optional" className={inputCls} />
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">Language</label>
+            <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Language</label>
             <select value={form.language} onChange={e => setForm('language', e.target.value)} className={inputCls}>
               {LANGUAGES.map(l => <option key={l.value} value={l.value}>{l.label}</option>)}
             </select>
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">Timezone</label>
-            <input value={form.timezone} readOnly className={inputCls + ' bg-slate-50'} />
+            <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Theme</label>
+            <select value={form.theme || 'system'} onChange={e => setForm('theme', e.target.value)} className={inputCls}>
+              {THEMES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+            </select>
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">Daily reminder time</label>
+            <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Timezone</label>
+            <input value={form.timezone} readOnly className={inputCls + ' bg-slate-50 dark:bg-slate-800'} />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Daily reminder time</label>
             <input type="time" value={form.reminderTime}
               onChange={e => setForm('reminderTime', e.target.value)} className={inputCls} />
           </div>
@@ -162,9 +173,9 @@ export default function SettingsTab({
       <Card>
         <div className="flex items-center gap-2 mb-4">
           <Shield className="w-4 h-4 text-indigo-500" />
-          <h3 className="font-semibold text-slate-800">Privacy &amp; backup</h3>
+          <h3 className="font-semibold text-slate-800 dark:text-slate-100">Privacy &amp; backup</h3>
         </div>
-        <p className="text-xs text-slate-500 mb-3">
+        <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
           All data is stored locally by default. Connect Google Drive to enable
           encrypted cloud backup. Your passphrase encrypts data before it ever
           leaves your device — even the app cannot read it.
@@ -172,8 +183,8 @@ export default function SettingsTab({
 
         {/* Drive connection status */}
         <div className="flex items-center gap-2 mb-3">
-          <span className={`inline-block w-2 h-2 rounded-full ${connected ? 'bg-emerald-400' : linked ? 'bg-amber-400' : 'bg-slate-300'}`} />
-          <span className="text-xs text-slate-500">
+          <span className={`inline-block w-2 h-2 rounded-full ${connected ? 'bg-emerald-400' : linked ? 'bg-amber-400' : 'bg-slate-500'}`} />
+          <span className="text-xs text-slate-500 dark:text-slate-400">
             {connected ? 'Drive connected' : linked ? 'Reconnecting…' : 'Drive not connected'}
           </span>
         </div>
@@ -194,10 +205,10 @@ export default function SettingsTab({
           {linked && (
             <>
               <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">Encryption passphrase</label>
+                <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Encryption passphrase</label>
                 <input type="password" value={passphrase} onChange={e => setPassphrase(e.target.value)}
                   placeholder="Strong passphrase (never stored)" className={inputCls} />
-                <p className="text-xs text-slate-400 mt-1">
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
                   Required for each backup/restore. Keep it safe — lost passphrases cannot be recovered.
                 </p>
               </div>
@@ -219,9 +230,9 @@ export default function SettingsTab({
         <Card>
           <div className="flex items-center gap-2 mb-3">
             <Download className="w-4 h-4 text-indigo-500" />
-            <h3 className="font-semibold text-slate-800">Install app</h3>
+            <h3 className="font-semibold text-slate-800 dark:text-slate-100">Install app</h3>
           </div>
-          <p className="text-xs text-slate-500 mb-3">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
             Install Migraine Tracker on your device for a faster, offline-ready experience.
           </p>
           <Button onClick={installPwa}>
@@ -234,9 +245,9 @@ export default function SettingsTab({
       <Card>
         <div className="flex items-center gap-2 mb-3">
           <Trash2 className="w-4 h-4 text-red-400" />
-          <h3 className="font-semibold text-slate-800">Danger zone</h3>
+          <h3 className="font-semibold text-slate-800 dark:text-slate-100">Danger zone</h3>
         </div>
-        <p className="text-xs text-slate-500 mb-3">
+        <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
           Permanently delete all local data including entries and preferences.
         </p>
         <Button variant="danger" onClick={deleteAll}>
