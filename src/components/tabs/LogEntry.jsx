@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import Card from '../shared/Card'
 import Button from '../shared/Button'
 import { Save, RotateCcw, ChevronDown, ChevronUp } from 'lucide-react'
@@ -26,6 +26,43 @@ const BASE = {
 }
 
 const inputCls = 'w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400'
+const MAX_DYNAMIC_SUGS = 12
+
+function buildLearnedSuggestions(entries, field, splitByComma = false) {
+  const scores = new Map()
+  const recentSorted = [...entries].sort((a, b) => new Date(b.startTime) - new Date(a.startTime))
+  recentSorted.forEach((entry, idx) => {
+    const raw = String(entry?.[field] || '').trim()
+    if (!raw) return
+    const values = splitByComma
+      ? raw.split(',').map(part => part.trim()).filter(Boolean)
+      : [raw]
+    values.forEach(value => {
+      const key = value.toLowerCase()
+      const found = scores.get(key)
+      if (found) {
+        found.count += 1
+        found.recency = Math.max(found.recency, recentSorted.length - idx)
+      } else {
+        scores.set(key, { value, count: 1, recency: recentSorted.length - idx })
+      }
+    })
+  })
+  return Array.from(scores.values())
+    .sort((a, b) => b.count - a.count || b.recency - a.recency || a.value.localeCompare(b.value))
+    .slice(0, MAX_DYNAMIC_SUGS)
+    .map(item => item.value)
+}
+
+function mergeSuggestions(defaults, learned) {
+  const seen = new Set()
+  return [...defaults, ...learned].filter(value => {
+    const key = String(value || '').trim().toLowerCase()
+    if (!key || seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+}
 
 function ChipRow({ options, field, form, set, activeClass = 'bg-indigo-500 text-white', inactiveClass = 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700' }) {
   return (
@@ -42,7 +79,7 @@ function ChipRow({ options, field, form, set, activeClass = 'bg-indigo-500 text-
   )
 }
 
-export default function LogEntry({ addEntry, updateEntry, editingEntry, setEditingEntry, addToast, setActiveTab }) {
+export default function LogEntry({ entries = [], addEntry, updateEntry, editingEntry, setEditingEntry, addToast, setActiveTab }) {
   const [form, setForm] = useState({ ...BASE, startTime: localNow() })
   const [showClinical, setShowClinical] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -79,6 +116,59 @@ export default function LogEntry({ addEntry, updateEntry, editingEntry, setEditi
   }, [editingEntry])
 
   function set(k, v) { setForm(p => ({ ...p, [k]: v })) }
+
+  const recentEntry = useMemo(() => {
+    if (!entries.length) return null
+    return [...entries].sort((a, b) => new Date(b.startTime) - new Date(a.startTime))[0] || null
+  }, [entries])
+
+  const foodSugs = useMemo(
+    () => mergeSuggestions(FOOD_SUGS, buildLearnedSuggestions(entries, 'foodNotes', true)),
+    [entries]
+  )
+  const medSugs = useMemo(
+    () => mergeSuggestions(MED_SUGS, buildLearnedSuggestions(entries, 'rescueMed')),
+    [entries]
+  )
+  const triggerSugs = useMemo(
+    () => mergeSuggestions(TRIGGER_SUGS, buildLearnedSuggestions(entries, 'suspectedTrigger', true)),
+    [entries]
+  )
+  const activitySugs = useMemo(
+    () => mergeSuggestions(ACTIVITY_SUGS, buildLearnedSuggestions(entries, 'activityImpact')),
+    [entries]
+  )
+
+  function applyRecentEpisode() {
+    if (!recentEntry) {
+      addToast('Log at least one episode first to use quick fill.', 'warning')
+      return
+    }
+    setForm(prev => ({
+      ...prev,
+      durationMinutes: recentEntry.durationMinutes ?? prev.durationMinutes,
+      painLevel: recentEntry.painLevel ?? prev.painLevel,
+      foodNotes: recentEntry.foodNotes || '',
+      hydrationLiters: recentEntry.hydrationLiters ?? prev.hydrationLiters,
+      sleepHours: recentEntry.sleepHours ?? prev.sleepHours,
+      stressLevel: recentEntry.stressLevel ?? prev.stressLevel,
+      cyclePhase: recentEntry.cyclePhase || prev.cyclePhase,
+      rescueMed: recentEntry.rescueMed || '',
+      medEffective: recentEntry.medEffective || prev.medEffective,
+      suspectedTrigger: recentEntry.suspectedTrigger || '',
+      activityImpact: recentEntry.activityImpact || '',
+      notes: recentEntry.notes || '',
+      symptomNausea: Boolean(recentEntry.symptoms?.nausea),
+      symptomPhoto: Boolean(recentEntry.symptoms?.photophobia),
+      symptomPhono: Boolean(recentEntry.symptoms?.phonophobia),
+      symptomAura: Boolean(recentEntry.symptoms?.aura),
+      ichdUnilateral: Boolean(recentEntry.ichd?.unilateral),
+      ichdPulsating: Boolean(recentEntry.ichd?.pulsating),
+      ichdAggravatedByActivity: Boolean(recentEntry.ichd?.aggravatedByActivity),
+      ichdModerateSevere: Boolean(recentEntry.ichd?.moderateSevere),
+    }))
+    addToast('Quick fill applied from your latest episode.')
+  }
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -140,11 +230,18 @@ export default function LogEntry({ addEntry, updateEntry, editingEntry, setEditi
         <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">
           {editingEntry ? 'Edit episode' : 'Log episode'}
         </h2>
-        {editingEntry && (
-          <Button variant="ghost" size="sm" onClick={reset}>
-            <RotateCcw className="w-3.5 h-3.5" /> Cancel edit
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {!editingEntry && (
+            <Button variant="ghost" size="sm" onClick={applyRecentEpisode}>
+              Quick fill
+            </Button>
+          )}
+          {editingEntry && (
+            <Button variant="ghost" size="sm" onClick={reset}>
+              <RotateCcw className="w-3.5 h-3.5" /> Cancel edit
+            </Button>
+          )}
+        </div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -190,7 +287,7 @@ export default function LogEntry({ addEntry, updateEntry, editingEntry, setEditi
               <input type="text" list="foodSugs" value={form.foodNotes}
                 onChange={e => set('foodNotes', e.target.value)}
                 placeholder="e.g. cheese, red wine" className={inputCls} />
-              <datalist id="foodSugs">{FOOD_SUGS.map(f => <option key={f} value={f} />)}</datalist>
+              <datalist id="foodSugs">{foodSugs.map(f => <option key={f} value={f} />)}</datalist>
             </div>
             <div>
               <FieldLabel>Hydration (L)</FieldLabel>
@@ -237,7 +334,7 @@ export default function LogEntry({ addEntry, updateEntry, editingEntry, setEditi
               <input type="text" list="medSugs" value={form.rescueMed}
                 onChange={e => set('rescueMed', e.target.value)}
                 placeholder="name + dose" className={inputCls} />
-              <datalist id="medSugs">{MED_SUGS.map(m => <option key={m} value={m} />)}</datalist>
+              <datalist id="medSugs">{medSugs.map(m => <option key={m} value={m} />)}</datalist>
             </div>
             <div>
               <FieldLabel>Med effective?</FieldLabel>
@@ -253,7 +350,7 @@ export default function LogEntry({ addEntry, updateEntry, editingEntry, setEditi
               <input type="text" list="trigSugs" value={form.suspectedTrigger}
                 onChange={e => set('suspectedTrigger', e.target.value)}
                 placeholder="stress, sleep loss…" className={inputCls} />
-              <datalist id="trigSugs">{TRIGGER_SUGS.map(t => <option key={t} value={t} />)}</datalist>
+              <datalist id="trigSugs">{triggerSugs.map(t => <option key={t} value={t} />)}</datalist>
             </div>
           </div>
 
@@ -261,7 +358,7 @@ export default function LogEntry({ addEntry, updateEntry, editingEntry, setEditi
           <div>
             <FieldLabel>Quick trigger pick</FieldLabel>
             <div className="flex flex-wrap gap-1.5">
-              {TRIGGER_SUGS.map(t => (
+              {triggerSugs.map(t => (
                 <button key={t} type="button"
                   onClick={() => set('suspectedTrigger', t)}
                   className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
@@ -281,7 +378,7 @@ export default function LogEntry({ addEntry, updateEntry, editingEntry, setEditi
             <input type="text" list="actSugs" value={form.activityImpact}
               onChange={e => set('activityImpact', e.target.value)}
               placeholder="missed work, bed rest…" className={inputCls} />
-            <datalist id="actSugs">{ACTIVITY_SUGS.map(a => <option key={a} value={a} />)}</datalist>
+            <datalist id="actSugs">{activitySugs.map(a => <option key={a} value={a} />)}</datalist>
           </div>
         </Card>
 
@@ -289,7 +386,7 @@ export default function LogEntry({ addEntry, updateEntry, editingEntry, setEditi
         <Card>
           <button type="button" onClick={() => setShowClinical(v => !v)}
             className="w-full flex items-center justify-between text-sm font-semibold text-slate-800 dark:text-slate-100">
-            Clinical fields (optional)
+            Extra symptom details (optional)
             {showClinical
               ? <ChevronUp className="w-4 h-4 text-slate-400 dark:text-slate-500" />
               : <ChevronDown className="w-4 h-4 text-slate-400 dark:text-slate-500" />}
@@ -300,13 +397,13 @@ export default function LogEntry({ addEntry, updateEntry, editingEntry, setEditi
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {[
                   ['symptomNausea',            'Nausea'],
-                  ['symptomPhoto',             'Photophobia'],
-                  ['symptomPhono',             'Phonophobia'],
+                  ['symptomPhoto',             'Light sensitivity'],
+                  ['symptomPhono',             'Sound sensitivity'],
                   ['symptomAura',              'Aura'],
-                  ['ichdUnilateral',           'Unilateral'],
-                  ['ichdPulsating',            'Pulsating'],
-                  ['ichdAggravatedByActivity', 'Aggravated by activity'],
-                  ['ichdModerateSevere',       'Moderate/severe']
+                  ['ichdUnilateral',           'One-sided pain'],
+                  ['ichdPulsating',            'Throbbing pain'],
+                  ['ichdAggravatedByActivity', 'Worse with activity'],
+                  ['ichdModerateSevere',       'Moderate or severe pain']
                 ].map(([k, lbl]) => (
                   <label key={k} className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 cursor-pointer">
                     <input type="checkbox" checked={form[k]} onChange={e => set(k, e.target.checked)}
@@ -330,7 +427,7 @@ export default function LogEntry({ addEntry, updateEntry, editingEntry, setEditi
             <input type="checkbox" checked={form.consent} onChange={e => set('consent', e.target.checked)}
               className="w-4 h-4 mt-0.5 rounded bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 text-indigo-500 focus:ring-indigo-400 flex-shrink-0" />
             <span className="text-xs text-slate-600 dark:text-slate-300">
-              I consent to processing this health data locally on my device and (optionally) in my own Google Drive.
+              I agree to store this health information on this device and, if I choose, in my own Google Drive.
             </span>
           </label>
           <Button type="submit" disabled={saving || !form.consent} className="w-full justify-center" size="lg">

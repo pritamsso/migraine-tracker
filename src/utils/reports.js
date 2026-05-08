@@ -31,10 +31,10 @@ function buildInsights(entries) {
     ratioAnalysis(entries, e => e.cyclePhase && e.cyclePhase !== 'Not tracked', 'cycle phase logged'),
     ratioAnalysis(entries, e => Boolean(e.foodNotes), 'food logged')
   ].filter(Boolean)
-  if (!analyses.length) return ['- Insufficient feature diversity for robust pattern signals.']
+  if (!analyses.length) return ['- Not enough varied data yet to spot reliable patterns.']
   return analyses.map(row => {
-    const confidence = row.support >= Math.max(8, Math.floor(total * 0.25)) ? 'moderate' : 'low'
-    return `- Episodes with ${row.label} appear ${row.multiplier}x as frequent (confidence: ${confidence}, support: ${row.support}).`
+      const confidence = row.support >= Math.max(8, Math.floor(total * 0.25)) ? 'medium' : 'low'
+      return `- Episodes with ${row.label} appear ${row.multiplier}x as frequent (confidence: ${confidence}, matched episodes: ${row.support}).`
   })
 }
 
@@ -74,13 +74,13 @@ export function renderReport(entries, days) {
     'Top cycle phases logged:',
     ...(topCyclePhases.length ? topCyclePhases.map(i => `- ${i.value}: ${i.count}`) : ['- Not enough cycle-phase data logged.']),
     '',
-    'Pattern signals (correlation, not causation):',
+    'Possible patterns (for reference only):',
     ...insights,
     '',
-    'Clinical framing:',
-    '- Fields include ICHD-3-aligned characteristics for diagnostic support.',
-    '- Use HIT-6 and MIDAS scores for disability trends.',
-    '- Not medical advice; discuss findings with a clinician.'
+    'How to use this summary:',
+    '- Use this report to discuss trends with your care team.',
+    '- If you use HIT-6 or MIDAS scores, track changes over time.',
+    '- This app is for personal tracking and is not medical advice.'
   ].join('\n')
 }
 

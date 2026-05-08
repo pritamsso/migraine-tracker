@@ -1,6 +1,6 @@
 # Migraine Tracker
 
-Migraine Tracker is a privacy-first web app for logging episodes, spotting patterns, and creating clinician-friendly reports.
+Migraine Tracker is a privacy-first web app for logging episodes, spotting patterns, and creating easy-to-share reports.
 
 **Live site:** https://migraintrack.com
 
@@ -66,14 +66,9 @@ To enable encrypted backup and restore:
 3. Connect Google Drive.
 4. Enter an encryption passphrase before running backup or restore.
 
-The app uses limited Drive scopes and stores backups in the app data area.
-Google OAuth is handled with JavaScript implicit flow in strict secretless mode:
-no client secret and no refresh-token grant.
-This flow is less preferred than Authorization Code + PKCE in modern OAuth
-guidance, but is intentionally used here to avoid backend token exchange and keep
-deployment fully static while still enabling direct token-return compatibility.
-Drive connection remains active only for the current browser session, so users
-must re-authorize Google Drive after restarting the browser/app session.
+Backups are encrypted before upload and saved in the app’s private Drive storage area.
+Drive connection stays active only for the current browser session, so you may need
+to reconnect Google Drive after restarting your browser or app.
 
 ## Deployment
 
