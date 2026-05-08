@@ -16,7 +16,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: main
           fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
@@ -40,5 +39,5 @@ jobs:
             echo "No dist changes to commit."
             exit 0
           fi
-          git commit -m "chore: update dist for deployment"
+          git commit -m "chore: update dist for deployment [skip ci]"
           git push origin HEAD:main
