@@ -36,6 +36,7 @@ const AUTH_ENDPOINT  = 'https://accounts.google.com/o/oauth2/v2/auth'
 const ACCESS_KEY     = 'migraineDrive.accessToken'
 const EXPIRES_AT_KEY = 'migraineDrive.accessTokenExpiresAt'
 const REFRESH_KEY    = 'migraineDrive.refreshToken' // legacy key cleanup only
+const OAUTH_STATE_HASH_KEY = 'migraineDrive.oauthStateHash'
 const ACCESS_TOKEN_EXPIRY_BUFFER_SECONDS = 30
 const MIN_ACCESS_TOKEN_LIFETIME_SECONDS = 60
 const DEFAULT_ACCESS_TOKEN_LIFETIME_SECONDS = 3600
@@ -49,6 +50,11 @@ function base64UrlEncode(buffer) {
 
 function generateOAuthState() {
   return base64UrlEncode(crypto.getRandomValues(new Uint8Array(16)).buffer)
+}
+
+async function hashTextBase64Url(value) {
+  const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value))
+  return base64UrlEncode(hash)
 }
 
 function calculateAccessTokenExpiry(expiresInSeconds) {
@@ -73,8 +79,8 @@ function getValidStoredAccessToken() {
 
 /**
  * Redirect the browser to Google's consent screen.
- * Stores state in sessionStorage so it survives the redirect and can be
- * verified when Google sends the user back.
+ * Stores a hash of state in sessionStorage so it survives the redirect and can
+ * be verified when Google sends the user back.
  */
 export async function startOAuthFlow() {
   if (!CLIENT_ID) throw new Error('Google Client ID is not configured for this app.')
@@ -82,7 +88,7 @@ export async function startOAuthFlow() {
   const state      = generateOAuthState()
   const redirectUri = `${window.location.origin}/`
 
-  sessionStorage.setItem('_oauthState', state)
+  sessionStorage.setItem(OAUTH_STATE_HASH_KEY, await hashTextBase64Url(state))
 
   const params = new URLSearchParams({
     client_id: CLIENT_ID,
@@ -122,14 +128,16 @@ export async function handleOAuthCallback() {
     )
   }
 
-  const savedState = sessionStorage.getItem('_oauthState')
-  sessionStorage.removeItem('_oauthState')
-  if (!savedState || state !== savedState) {
+  const savedState = sessionStorage.getItem(OAUTH_STATE_HASH_KEY)
+  sessionStorage.removeItem(OAUTH_STATE_HASH_KEY)
+  const stateHash = state ? await hashTextBase64Url(state) : ''
+  if (!savedState || !stateHash || stateHash !== savedState) {
     throw new Error('Security error: state mismatch. Please try again.')
   }
 
   sessionStorage.setItem(ACCESS_KEY, accessToken)
-  sessionStorage.setItem(EXPIRES_AT_KEY, String(calculateAccessTokenExpiry(expiresIn)))
+  const expiresAt = calculateAccessTokenExpiry(expiresIn || DEFAULT_ACCESS_TOKEN_LIFETIME_SECONDS)
+  sessionStorage.setItem(EXPIRES_AT_KEY, String(expiresAt))
   localStorage.removeItem(REFRESH_KEY)
 
   return accessToken
@@ -155,6 +163,7 @@ export function unlinkDrive() {
   const token = sessionStorage.getItem(ACCESS_KEY)
   sessionStorage.removeItem(ACCESS_KEY)
   sessionStorage.removeItem(EXPIRES_AT_KEY)
+  sessionStorage.removeItem(OAUTH_STATE_HASH_KEY)
   localStorage.removeItem(REFRESH_KEY)
   // Best-effort token revocation (fire-and-forget)
   if (token) {
