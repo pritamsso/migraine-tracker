@@ -4,6 +4,8 @@
  * The OAuth Client ID is a PUBLIC identifier (visible in every auth URL) and is
  * safe to embed in frontend code.  No client_secret is required; PKCE replaces
  * the secret and is Google's recommended approach for browser-based public clients.
+ * This implementation is intentionally strict secretless: it does not use
+ * refresh_token grant flows or any client secret.
  *
  * Setup checklist (Google Cloud Console):
  *   1. Create an OAuth 2.0 Client ID (Application type: Web application).
@@ -34,7 +36,9 @@ const SCOPES = 'https://www.googleapis.com/auth/drive.appdata'
 
 const AUTH_ENDPOINT  = 'https://accounts.google.com/o/oauth2/v2/auth'
 const TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token'
-const REFRESH_KEY    = 'migraineDrive.refreshToken'
+const ACCESS_KEY     = 'migraineDrive.accessToken'
+const EXPIRES_AT_KEY = 'migraineDrive.accessTokenExpiresAt'
+const REFRESH_KEY    = 'migraineDrive.refreshToken' // legacy key cleanup only
 
 // ── PKCE helpers ──────────────────────────────────────────────────────────────
 
@@ -84,8 +88,7 @@ export async function startOAuthFlow() {
     scope:                 SCOPES,
     code_challenge:        challenge,
     code_challenge_method: 'S256',
-    access_type:           'offline',
-    prompt:                'consent select_account',
+    prompt:                'select_account',
     state,
   })
 
@@ -95,7 +98,7 @@ export async function startOAuthFlow() {
 /**
  * Call once on app initialisation.  When Google redirects back with ?code=…,
  * this exchanges the authorisation code for tokens using PKCE (no secret needed),
- * persists the refresh token, and cleans up the URL.
+ * stores only the short-lived access token in sessionStorage, and cleans up the URL.
  *
  * @returns {Promise<string|null>} access_token on success, null if no code present.
  */
@@ -120,6 +123,7 @@ export async function handleOAuthCallback() {
   const verifier = sessionStorage.getItem('_oauthVerifier')
   sessionStorage.removeItem('_oauthVerifier')
   sessionStorage.removeItem('_oauthState')
+  if (!verifier) throw new Error('Security error: missing PKCE verifier. Please try again.')
 
   const res = await fetch(TOKEN_ENDPOINT, {
     method:  'POST',
@@ -140,53 +144,45 @@ export async function handleOAuthCallback() {
 
   const data = await res.json()
 
-  // Persist the refresh token so the user stays connected across sessions.
-  // Scope is limited to the hidden AppData folder only.
-  if (data.refresh_token) {
-    localStorage.setItem(REFRESH_KEY, data.refresh_token)
+  if (data.access_token) {
+    sessionStorage.setItem(ACCESS_KEY, data.access_token)
+    const expiresAt = Date.now() + Math.max((Number(data.expires_in) || 3600) - 30, 60) * 1000
+    sessionStorage.setItem(EXPIRES_AT_KEY, String(expiresAt))
   }
+  localStorage.removeItem(REFRESH_KEY)
 
   return data.access_token || null
 }
 
 /**
- * Use the persisted refresh token to get a fresh access token silently.
- * Called automatically on app load when a refresh token is stored.
+ * Restore access token from sessionStorage only (strict secretless mode).
  *
  * @returns {Promise<string|null>} access_token or null if unavailable.
  */
 export async function refreshAccessToken() {
-  const refreshToken = localStorage.getItem(REFRESH_KEY)
-  if (!refreshToken) return null
-
-  const res = await fetch(TOKEN_ENDPOINT, {
-    method:  'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      refresh_token: refreshToken,
-      client_id:     CLIENT_ID,
-      grant_type:    'refresh_token',
-    }),
-  })
-
-  if (!res.ok) {
-    // Refresh token revoked or expired — require re-auth
-    localStorage.removeItem(REFRESH_KEY)
+  localStorage.removeItem(REFRESH_KEY)
+  const token = sessionStorage.getItem(ACCESS_KEY)
+  const expiresAt = Number(sessionStorage.getItem(EXPIRES_AT_KEY) || 0)
+  if (!token || !expiresAt || Date.now() >= expiresAt) {
+    sessionStorage.removeItem(ACCESS_KEY)
+    sessionStorage.removeItem(EXPIRES_AT_KEY)
     return null
   }
-
-  const data = await res.json()
-  return data.access_token || null
+  return token
 }
 
-/** True if the user has previously authorised Drive on this device. */
+/** True if the user has an active access token in this browser session. */
 export function isDriveLinked() {
-  return Boolean(localStorage.getItem(REFRESH_KEY))
+  const token = sessionStorage.getItem(ACCESS_KEY)
+  const expiresAt = Number(sessionStorage.getItem(EXPIRES_AT_KEY) || 0)
+  return Boolean(token && expiresAt && Date.now() < expiresAt)
 }
 
-/** Revoke the stored refresh token and unlink Drive. */
+/** Revoke the current access token and unlink Drive. */
 export function unlinkDrive() {
-  const token = localStorage.getItem(REFRESH_KEY)
+  const token = sessionStorage.getItem(ACCESS_KEY)
+  sessionStorage.removeItem(ACCESS_KEY)
+  sessionStorage.removeItem(EXPIRES_AT_KEY)
   localStorage.removeItem(REFRESH_KEY)
   // Best-effort token revocation (fire-and-forget)
   if (token) {
